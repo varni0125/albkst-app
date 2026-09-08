@@ -6,13 +6,16 @@
 import { json, fail, preflight, readJson } from './http.js';
 import { lookupAccount, normalizeId } from './accounts.js';
 import { accountStore, Account } from './account-store.js';
+import { hashPin, verifyPin, pinProblem, signToken, verifyToken } from './auth.js';
 import {
-  hashPin,
-  verifyPin,
-  pinProblem,
-  signToken,
-  verifyToken,
-} from './auth.js';
+  listSessions,
+  findSession,
+  rosterFor,
+  setWindow,
+  closeWindow,
+  selfCheckin,
+  markAttendance,
+} from './sessions.js';
 
 export { Account };
 
@@ -49,9 +52,7 @@ async function handleLogin(request, env) {
   if (!account || !state.hasPin) {
     await verifyPin(pin, await hashPin('000000'));
     if (account && !state.hasPin) {
-      return fail(env, 409, 'No PIN set for this ID yet.', {
-        needsPinSetup: true,
-      });
+      return fail(env, 409, 'No PIN set for this ID yet.', { needsPinSetup: true });
     }
     await store.recordFailure();
     return fail(env, 401, BAD_CREDENTIALS);
@@ -74,8 +75,8 @@ async function handleLogin(request, env) {
   });
 }
 
-// First login only. Setting a PIN over an existing one is refused — that path
-// is a karyakar reset, which is Phase 1 work still to come.
+// First login only. Setting a PIN over an existing one is refused; replacing
+// one is a karyakar reset.
 async function handleSetPin(request, env) {
   const { id: rawId, pin } = await readJson(request);
   const id = normalizeId(rawId);
@@ -87,14 +88,9 @@ async function handleSetPin(request, env) {
   const account = await lookupAccount(env, id);
   if (!account) return fail(env, 401, BAD_CREDENTIALS);
 
-  const store = accountStore(env, id);
-  const { alreadySet } = await store.setPin(await hashPin(pin));
+  const { alreadySet } = await accountStore(env, id).setPin(await hashPin(pin));
   if (alreadySet) {
-    return fail(
-      env,
-      409,
-      'This ID already has a PIN. Ask a karyakar to reset it.'
-    );
+    return fail(env, 409, 'This ID already has a PIN. Ask a karyakar to reset it.');
   }
 
   return json(env, {
@@ -103,36 +99,113 @@ async function handleSetPin(request, env) {
   });
 }
 
+async function handleResetPin(request, env, actor) {
+  const { id: rawId } = await readJson(request);
+  const id = normalizeId(rawId);
+  const target = await lookupAccount(env, id);
+  if (!target) return fail(env, 404, 'No active account with that ID.');
+
+  await accountStore(env, id).resetPin();
+  // Who reset whose PIN, and when. Section 11 of the spec asks for this.
+  console.log(
+    JSON.stringify({ event: 'pin_reset', by: actor.id, target: id, at: new Date().toISOString() })
+  );
+  return json(env, {
+    ok: true,
+    message: `${target.name} can now set a new PIN at their next sign in.`,
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const route = `${request.method} ${url.pathname}`;
+    const path = url.pathname;
+    const method = request.method;
 
-    if (request.method === 'OPTIONS') return preflight(env);
+    if (method === 'OPTIONS') return preflight(env);
 
     try {
-      switch (route) {
-        case 'GET /health':
-          return json(env, { ok: true });
+      if (method === 'GET' && path === '/health') return json(env, { ok: true });
+      if (method === 'POST' && path === '/auth/login') return await handleLogin(request, env);
+      if (method === 'POST' && path === '/auth/set-pin') return await handleSetPin(request, env);
 
-        case 'POST /auth/login':
-          return await handleLogin(request, env);
+      // Everything below needs a valid token.
+      const account = await authenticate(request, env);
+      if (!account) return fail(env, 401, 'Please log in again.');
 
-        case 'POST /auth/set-pin':
-          return await handleSetPin(request, env);
+      const karyakarOnly = () =>
+        account.role === 'karyakar'
+          ? null
+          : fail(env, 403, 'That is not available to you.');
 
-        case 'GET /me': {
-          const account = await authenticate(request, env);
-          if (!account) return fail(env, 401, 'Please log in again.');
-          return json(env, { account });
+      if (method === 'GET' && path === '/me') return json(env, { account });
+
+      if (method === 'POST' && path === '/auth/reset-pin') {
+        return karyakarOnly() || (await handleResetPin(request, env, account));
+      }
+
+      if (method === 'GET' && path === '/sessions') {
+        return json(env, { sessions: await listSessions(env) });
+      }
+
+      const sessionMatch = path.match(/^\/sessions\/([A-Za-z0-9_-]+)(\/[a-z-]+)?$/);
+      if (sessionMatch) {
+        const session = await findSession(env, sessionMatch[1]);
+        if (!session) return fail(env, 404, 'No such session.');
+        const action = sessionMatch[2] || '';
+
+        if (method === 'GET' && action === '') {
+          const denied = karyakarOnly();
+          if (denied) return denied;
+          return json(env, {
+            session: (await listSessions(env)).find((s) => s.id === session.session_id),
+            roster: await rosterFor(env, session.session_id),
+          });
         }
 
-        default:
-          return fail(env, 404, 'Not found.');
+        if (method === 'POST' && action === '/window') {
+          const denied = karyakarOnly();
+          if (denied) return denied;
+          const { state } = await readJson(request);
+          if (state === 'open') {
+            return json(env, { session: await setWindow(env, session, 'open') });
+          }
+          if (state === 'closed') {
+            const result = await closeWindow(env, session, account.id);
+            return json(env, {
+              session: (await listSessions(env)).find((s) => s.id === session.session_id),
+              roster: await rosterFor(env, session.session_id),
+              markedAbsent: result.markedAbsent,
+            });
+          }
+          return fail(env, 400, 'Check-in can only be opened or closed.');
+        }
+
+        if (method === 'POST' && action === '/attendance') {
+          const denied = karyakarOnly();
+          if (denied) return denied;
+          const entry = await readJson(request);
+          if (!entry.bkId || !['present', 'absent'].includes(entry.status)) {
+            return fail(env, 400, 'A delegate and a status are needed.');
+          }
+          await markAttendance(env, session, entry, account.id);
+          return json(env, { roster: await rosterFor(env, session.session_id) });
+        }
+
+        if (method === 'POST' && action === '/checkin') {
+          if (account.role !== 'delegate') {
+            return fail(env, 403, 'Only delegates check themselves in.');
+          }
+          const result = await selfCheckin(env, session, account.id);
+          if (!result.ok) return fail(env, 409, result.error);
+          return json(env, result);
+        }
       }
+
+      return fail(env, 404, 'Not found.');
     } catch (error) {
       // The detail goes to the log, never to the browser.
-      console.error(route, error.stack || error.message);
+      console.error(method, path, error.stack || error.message);
       return fail(env, 500, 'Something went wrong. Try again.');
     }
   },

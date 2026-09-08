@@ -4,9 +4,32 @@
 // service account's private key, trades it for an access token, and caches
 // that token until shortly before it expires.
 //
-// The Sheet holds roster and program data only. Credentials live in KV.
+// The Sheet holds roster and program data only. Credentials live in the
+// Account durable object.
 
 let cachedToken = null; // { token, expiresAt }
+
+// Google allows 60 reads per minute per service account. Twenty-five
+// delegates checking in at once, each request reading whole tabs, goes past
+// that in seconds and the app starts failing at the worst possible moment.
+//
+// So tab reads are cached in the isolate. How stale each tab may be is a
+// judgement about what it costs to be wrong: a roster that is a minute out of
+// date is fine, a check-in that is three seconds out of date is fine, and any
+// write clears its own tab immediately.
+const TAB_MAX_AGE_MS = {
+  delegates: 60000,
+  karyakars: 60000,
+  sessions: 15000,
+  attendance: 3000,
+  scores: 5000,
+};
+const tabCache = new Map(); // tab -> { rows, at }
+const headerCache = new Map(); // tab -> headers, which never change
+
+function invalidate(tab) {
+  tabCache.delete(tab);
+}
 
 function pemToBinary(pem) {
   const body = pem
@@ -98,18 +121,35 @@ async function api(env, path, init = {}) {
   return data;
 }
 
-// Every row of a tab as an object keyed by the header row.
+async function headersFor(env, tab) {
+  if (headerCache.has(tab)) return headerCache.get(tab);
+  const data = await api(env, `/values/${encodeURIComponent(tab)}!1:1`);
+  const headers = data.values?.[0] || [];
+  if (headers.length) headerCache.set(tab, headers);
+  return headers;
+}
+
+// Every row of a tab as an object keyed by the header row. `_row` is the
+// spreadsheet row number, which updateRow needs.
 export async function readTab(env, tab) {
+  const cached = tabCache.get(tab);
+  const maxAge = TAB_MAX_AGE_MS[tab] ?? 5000;
+  if (cached && Date.now() - cached.at < maxAge) return cached.rows;
+
   const data = await api(env, `/values/${encodeURIComponent(tab)}`);
   const [headers, ...rows] = data.values || [[]];
-  if (!headers) return [];
-  return rows.map((row) => {
-    const record = {};
-    headers.forEach((name, i) => {
-      record[name] = row[i] ?? '';
+  if (!headers || !headers.length) return [];
+  if (!headerCache.has(tab)) headerCache.set(tab, headers);
+
+  const records = rows.map((row, i) => {
+    const record = { _row: i + 2 };
+    headers.forEach((name, column) => {
+      record[name] = row[column] ?? '';
     });
     return record;
   });
+  tabCache.set(tab, { rows: records, at: Date.now() });
+  return records;
 }
 
 export async function findRow(env, tab, key, value) {
@@ -117,15 +157,51 @@ export async function findRow(env, tab, key, value) {
   return rows.find((row) => row[key] === value) || null;
 }
 
-// Appends a row. Used for the attendance ledger, where concurrent writes must
+// Appends rows. Used for the attendance ledger, where concurrent writes must
 // never overwrite each other.
-export async function appendRow(env, tab, record) {
-  const data = await api(env, `/values/${encodeURIComponent(tab)}!1:1`);
-  const headers = data.values?.[0] || [];
-  const row = headers.map((name) => record[name] ?? '');
+export async function appendRows(env, tab, records) {
+  if (!records.length) return;
+  const headers = await headersFor(env, tab);
+  const values = records.map((record) =>
+    headers.map((name) => record[name] ?? '')
+  );
   await api(
     env,
     `/values/${encodeURIComponent(tab)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
-    { method: 'POST', body: JSON.stringify({ values: [row] }) }
+    { method: 'POST', body: JSON.stringify({ values }) }
   );
+  invalidate(tab);
+}
+
+// Read-modify-write of one row. Only for tabs a single karyakar edits at a
+// time, never for attendance.
+export async function updateRow(env, tab, rowNumber, patch) {
+  const headers = await headersFor(env, tab);
+  const range = `${encodeURIComponent(tab)}!A${rowNumber}`;
+  const current = await api(
+    env,
+    `/values/${range}:${columnLetter(headers.length)}${rowNumber}`
+  );
+  const row = current.values?.[0] || [];
+  headers.forEach((name, i) => {
+    if (name in patch) row[i] = patch[name];
+    else if (row[i] === undefined) row[i] = '';
+  });
+  await api(
+    env,
+    `/values/${range}:${columnLetter(headers.length)}${rowNumber}?valueInputOption=RAW`,
+    { method: 'PUT', body: JSON.stringify({ values: [row] }) }
+  );
+  invalidate(tab);
+}
+
+function columnLetter(count) {
+  let letter = '';
+  let n = count;
+  while (n > 0) {
+    const remainder = (n - 1) % 26;
+    letter = String.fromCharCode(65 + remainder) + letter;
+    n = Math.floor((n - 1) / 26);
+  }
+  return letter;
 }

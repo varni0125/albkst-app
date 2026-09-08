@@ -58,4 +58,12 @@ deployed yet, the app is broken in production.
 
 1. `wrangler deploy` from `worker/`
 2. Verify the endpoint responds
-3. Then commit and push `docs/`
+3. Bump the `?v=` on the `tokens.css`, `app.css`, and `app.js` tags in
+   `docs/index.html`
+4. Then commit and push `docs/`
+
+GitHub Pages serves everything with `cache-control: max-age=600`, so a phone
+holds a stale copy for up to ten minutes after a push. The `?v=` bump means
+CSS and JS refresh the moment the HTML does, instead of ten minutes later
+again. Nothing can shorten the wait on `index.html` itself — when testing a
+fix, use a private tab.

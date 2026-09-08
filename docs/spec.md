@@ -1,6 +1,6 @@
 # BKST App — Specification v1
 
-Bal-Kishore Sevak Training · Raleigh pilot
+Bal-Kishore Sevak Training · Alabama pilot
 
 ---
 
@@ -18,7 +18,14 @@ visible before it becomes a dismissal.
 ### Scope
 
 Six sessions per year: three in fall term, three in spring, roughly a month
-apart.
+apart. Each runs three days, Friday to Sunday, hosted at one center that the
+whole cohort travels to.
+
+**Fall 2026** — Sept 11–13 Birmingham, Oct 2–4 Montgomery, Nov 20–22
+Birmingham. Spring dates are not set.
+
+Twenty-five delegates across five Alabama centers: Birmingham 9, Dothan 9,
+Montgomery 3, Huntsville 2, Mobile 2.
 
 **In scope**
 - Attendance, with a karyakar-controlled check-in window
@@ -87,7 +94,7 @@ Whoever reaches an account first sets its PIN, and BK IDs are not secret. So
 someone who knows a delegate's BK ID could claim that account before the
 delegate does.
 
-Accepted for the pilot rather than fixed. All nineteen delegates log in at
+Accepted for the pilot rather than fixed. All twenty-five delegates log in at
 session one, which closes the window almost immediately, and requiring a
 karyakar to unlock each account first adds friction to the one session where
 everyone is already busy. Revisit if the pilot grows past one mandal.
@@ -103,8 +110,8 @@ Google Sheet, one tab per table.
 |---|---|
 | bk_id | primary key |
 | first_name, last_name | |
-| center | reserved from day one, single value for now — makes multi-center a config change, not a rewrite |
-| term_group | e.g. "Raleigh 2026" |
+| center | the delegate's home center — five of them, so this is real data from day one, not a placeholder |
+| term_group | e.g. "Alabama 2026-2027" |
 | active | false on dismissal or withdrawal |
 | notes | free text, karyakar-only, qualitative |
 
@@ -123,7 +130,9 @@ No PIN column — credentials live in KV, per section 2.
 |---|---|
 | session_id | |
 | term | fall / spring |
-| session_date, start_time | |
+| session_date, session_end_date | a session spans three days |
+| location | the host center |
+| start_time | |
 | checkin_state | closed / open / closed_manually |
 | has_homework | most sessions: false |
 | hw_due_date, hw_points | set by karyakar when creating the assignment |
@@ -143,7 +152,7 @@ No PIN column — credentials live in KV, per section 2.
 | marked_at, marked_by | |
 
 **Append-only.** Every check-in and every karyakar mark adds a row; nothing is
-overwritten. Nineteen delegates checking in within the same two minutes would
+overwritten. Twenty-five delegates checking in within the same two minutes would
 otherwise race on a read-modify-write and silently lose a tap. The Worker
 reconciles on read — most recent row wins per (session_id, bk_id) — and the
 duplicate rows are the audit trail.
@@ -235,7 +244,7 @@ key, points, type.
 ### Grading — by question, not by delegate
 Karyakar picks a question and sees every delegate's answer to it in one scroll,
 with the answer key pinned at the top. Same headspace, repeated judgement:
-faster and far more consistent than reading 19 complete quizzes.
+faster and far more consistent than reading 25 complete quizzes.
 
 Point entry is tap targets (0 / 3 / 5), not a number field.
 
@@ -249,6 +258,9 @@ this costs nothing to support.
 
 ## 6. Attendance flow
 
+**One check-in per session, not per day.** A session is a single unit for
+attendance, grading, and the absence counter, however many days it runs.
+
 1. Karyakar opens check-in for the session
 2. Delegates tap check-in in the app while the window is open
 3. Karyakar closes the window when the session starts
@@ -256,7 +268,7 @@ this costs nothing to support.
 5. **Manual mark** for anyone arriving after the window shuts
 
 No QR codes — a code with no time limit can be screenshotted and forwarded, and
-QR's advantage (speed at a queue) doesn't apply to 19 people six times a year.
+QR's advantage (speed at a queue) doesn't apply to 25 people six times a year.
 
 No punctuality tracking. It was a byproduct of timestamped scanning; without
 that it isn't meaningful data.
@@ -433,4 +445,7 @@ None. All policy questions are resolved.
   encouraging tablets and laptops; fall back to paper essays if quality drops
 - **Six sessions a year means no habit forms.** Reminders before each session
   will do more for engagement than any screen in the app
+- **Delegates travel between centers.** A session is hosted at one center and
+  the rest drive to it, so absence reasons will often be travel, and the
+  karyakar approving them may not be the delegate's own center's karyakar
 - **Delivery channel for reminders is undecided** — email is free, SMS costs

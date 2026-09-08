@@ -41,19 +41,40 @@ apart.
 
 ## 2. Roles and auth
 
+One login form for everyone: an ID and a PIN. The Worker looks up the ID,
+determines the role, and routes from there. Delegates never see a karyakar
+screen and are never told one exists.
+
 ### Delegate
 - **Username:** BK ID (canonical, avoids name collisions and spelling variants)
-- **Password:** PIN the delegate sets on first login
+- **Password:** 4–6 digit PIN the delegate sets on first login; length is the
+  delegate's choice
 - BK ID alone is not a secret — karyakars know it, it appears on forms — so it
   cannot serve as the password on an app that holds graded assessments
 - Karyakar can reset a forgotten PIN
 - Any device: phone, tablet, laptop. Encourage larger devices for essay sessions
 
 ### Karyakar
-- Separate account system entirely. Email plus a real password
-- Never shares a login mechanism with the delegate side
+- **Username:** karyakar ID, `K`-prefixed so it can never collide with a BK ID
+- **Password:** 4–6 digit PIN, same mechanism as the delegate side. Email and a
+  long password were considered and rejected as too tedious to type at the
+  start of every session
+- Any karyakar can reset another karyakar's PIN. Log who did it and when
 - **Role is checked server-side on every request**, not just at login. A
   delegate must not be able to reach karyakar data by changing a URL
+
+### Credential storage
+
+**PIN hashes live in Cloudflare KV, not the Sheet.** A 4-digit PIN has only
+10,000 possibilities, so a hash sitting in a spreadsheet is recoverable in
+under a second by anyone who can open that spreadsheet — and karyakars can
+open it. KV is readable only by the Worker.
+
+Hashing is PBKDF2-SHA256 with a per-user random salt. Five failed attempts
+locks that ID for 15 minutes, which is the real defense against guessing a
+short PIN.
+
+The Sheet holds roster and program data only. It never holds a credential.
 
 ---
 
@@ -68,9 +89,18 @@ Google Sheet, one tab per table.
 | first_name, last_name | |
 | center | reserved from day one, single value for now — makes multi-center a config change, not a rewrite |
 | term_group | e.g. "Raleigh 2026" |
-| pin_hash | set on first login |
 | active | false on dismissal or withdrawal |
 | notes | free text, karyakar-only, qualitative |
+
+### karyakars
+| field | notes |
+|---|---|
+| karyakar_id | primary key, `K`-prefixed |
+| first_name, last_name | |
+| active | false when someone stops serving |
+| created_at | |
+
+No PIN column — credentials live in KV, per section 2.
 
 ### sessions
 | field | notes |
@@ -95,6 +125,14 @@ Google Sheet, one tab per table.
 | decided_by, decided_at | |
 | source | self_checkin / karyakar_marked |
 | marked_at, marked_by | |
+
+**Append-only.** Every check-in and every karyakar mark adds a row; nothing is
+overwritten. Nineteen delegates checking in within the same two minutes would
+otherwise race on a read-modify-write and silently lose a tap. The Worker
+reconciles on read — most recent row wins per (session_id, bk_id) — and the
+duplicate rows are the audit trail.
+
+Every other tab is one row per key.
 
 ### questions
 | field | notes |
@@ -356,8 +394,8 @@ for each delegate.
 - **National permission** — not a blocker. The program previously ran these
   quizzes through Google Classroom; the app replaces a tedious workflow rather
   than introducing a new one.
-- **PIN resets** — any karyakar can reset any delegate's PIN. Log who did it and
-  when.
+- **PIN resets** — any karyakar can reset any delegate's PIN, and any other
+  karyakar's. Log who did it and when.
 
 - **Excused absence** — excluded from the grade entirely, not recorded as a
   zero. Delegate is graded on sessions attended. The 80% applies per session.

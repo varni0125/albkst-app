@@ -410,8 +410,11 @@ function renderStanding(standing) {
   allowance.textContent = `${spent} of ${standing.absencesAllowed} absence used`;
   allowance.dataset.spent = spent > 0 ? 'true' : 'false';
 
-  // The next session that has not already happened.
-  const next = standing.sessions.find((session) => !session.ended);
+  // A session with its check-in window open is the one happening now, whatever
+  // the calendar says. Only when nothing is open does the next date win.
+  const next =
+    standing.sessions.find((session) => !session.ended && session.checkinOpen) ||
+    standing.sessions.find((session) => !session.ended);
   const card = document.getElementById('next-card');
   card.hidden = !next;
   if (next) {
@@ -425,10 +428,16 @@ function renderStanding(standing) {
     button.hidden = !next.canCheckIn;
     button.onclick = () => checkIn(next.id);
 
-    // Nothing is said about a check-in that is not available. Section 9: a
-    // warning names its remedy, or it is not shown.
-    document.getElementById('next-hint').textContent =
-      next.status === 'present' ? 'You are checked in.' : '';
+    // Section 9: a warning names its remedy, or it is not shown. So a closed
+    // window says nothing, but being already marked does.
+    const hint = document.getElementById('next-hint');
+    if (next.status === 'present') hint.textContent = 'You are checked in.';
+    else if (next.status === 'absent') {
+      hint.textContent =
+        next.absenceOutcome === 'approved'
+          ? 'This session is excused.'
+          : 'You are marked absent for this session.';
+    } else hint.textContent = '';
   }
 
   renderSlots(standing.sessions);

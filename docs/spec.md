@@ -108,8 +108,9 @@ Google Sheet, one tab per table.
 ### delegates
 | field | notes |
 |---|---|
-| bk_id | primary key |
+| bk_id | primary key, the BKMS ID from the application |
 | first_name, last_name | |
+| grade | high school grade, 9 to 12 |
 | center | the delegate's home center — five of them, so this is real data from day one, not a placeholder |
 | term_group | e.g. "Alabama 2026-2027" |
 | active | false on dismissal or withdrawal |

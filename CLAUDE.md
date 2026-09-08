@@ -1,6 +1,7 @@
 # BKST App — working conventions
 
-Standing tracker for Bal-Kishore Sevak Training delegates, Raleigh pilot.
+Standing tracker for Bal-Kishore Sevak Training delegates, Alabama pilot:
+25 delegates across five centers, six three-day sessions a year.
 The full specification is `docs/spec.md`. Read it before proposing work.
 
 ## Current phase

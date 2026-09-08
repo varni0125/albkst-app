@@ -15,6 +15,7 @@ import {
   closeWindow,
   selfCheckin,
   markAttendance,
+  standingFor,
 } from './sessions.js';
 
 export { Account };
@@ -139,6 +140,13 @@ export default {
           : fail(env, 403, 'That is not available to you.');
 
       if (method === 'GET' && path === '/me') return json(env, { account });
+
+      if (method === 'GET' && path === '/me/standing') {
+        if (account.role !== 'delegate') {
+          return fail(env, 403, 'That is not available to you.');
+        }
+        return json(env, await standingFor(env, account.id));
+      }
 
       if (method === 'POST' && path === '/auth/reset-pin') {
         return karyakarOnly() || (await handleResetPin(request, env, account));

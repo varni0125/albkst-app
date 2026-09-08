@@ -32,7 +32,7 @@ const ICON = {
 
 function show(name) {
   for (const [key, section] of Object.entries(views)) section.hidden = key !== name;
-  if (name !== 'session') stopPolling();
+  if (name !== 'session' && name !== 'delegate') stopPolling();
 }
 
 function say(text, tone = 'problem') {
@@ -356,17 +356,139 @@ async function resetPin(person) {
   say(ok ? body.message : body.error || 'Could not reset that PIN.', ok ? 'good' : 'problem');
 }
 
-function startPolling() {
+function startPolling(refresher) {
   stopPolling();
+  const refresh = refresher || refreshSession;
   pollTimer = setInterval(() => {
-    // Not while someone is mid-decision on a name.
-    if (!openPerson && !document.hidden) refreshSession();
+    // Not while a karyakar is mid-decision on a name.
+    if (!openPerson && !document.hidden) refresh();
   }, POLL_MS);
 }
 
 function stopPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = null;
+}
+
+
+/* ---------- delegate: their own year ---------- */
+
+const SESSIONS_IN_A_YEAR = 6;
+
+async function showStanding() {
+  show('delegate');
+  await refreshStanding();
+  // The window can open while a delegate is already looking at this screen.
+  startPolling(refreshStanding);
+}
+
+async function refreshStanding() {
+  const { ok, body } = await call('/me/standing');
+  if (!ok) return say(body.error || 'Could not load your sessions.');
+  renderStanding(body);
+}
+
+function slotStatus(session) {
+  if (session.status === 'present') return 'present';
+  if (session.status === 'absent') {
+    return session.absenceOutcome === 'approved' ? 'excused' : 'absent';
+  }
+  return 'upcoming';
+}
+
+function statusWords(session) {
+  if (session.status === 'present') return 'Present';
+  if (session.status === 'absent') {
+    return session.absenceOutcome === 'approved' ? 'Excused' : 'Absent';
+  }
+  return session.ended ? 'Not recorded' : 'Not yet';
+}
+
+function renderStanding(standing) {
+  const allowance = document.getElementById('allowance');
+  const spent = standing.absencesUsed;
+  allowance.textContent = `${spent} of ${standing.absencesAllowed} absence used`;
+  allowance.dataset.spent = spent > 0 ? 'true' : 'false';
+
+  // The next session that has not already happened.
+  const next = standing.sessions.find((session) => !session.ended);
+  const card = document.getElementById('next-card');
+  card.hidden = !next;
+  if (next) {
+    document.getElementById('next-when').textContent = dateRange(
+      next.startDate,
+      next.endDate
+    );
+    document.getElementById('next-where').textContent = next.location;
+
+    const button = document.getElementById('checkin');
+    button.hidden = !next.canCheckIn;
+    button.onclick = () => checkIn(next.id);
+
+    // Nothing is said about a check-in that is not available. Section 9: a
+    // warning names its remedy, or it is not shown.
+    document.getElementById('next-hint').textContent =
+      next.status === 'present' ? 'You are checked in.' : '';
+  }
+
+  renderSlots(standing.sessions);
+  renderSessionLines(standing.sessions);
+}
+
+function renderSlots(sessions) {
+  const row = document.getElementById('slots');
+  row.textContent = '';
+  for (let i = 0; i < SESSIONS_IN_A_YEAR; i++) {
+    const session = sessions[i];
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    if (session) {
+      slot.dataset.status = slotStatus(session);
+      slot.textContent = dateRange(session.startDate, session.endDate);
+    } else {
+      slot.dataset.status = 'unscheduled';
+      slot.textContent = 'Spring';
+    }
+    row.append(slot);
+  }
+}
+
+function renderSessionLines(sessions) {
+  const list = document.getElementById('session-lines');
+  list.textContent = '';
+  for (const session of sessions) {
+    const line = document.createElement('div');
+    line.className = 'session-line';
+    line.innerHTML =
+      '<div class="session-line-head">' +
+      `<h2>${escape(dateRange(session.startDate, session.endDate))}</h2>` +
+      `<span class="chip" data-status="${slotStatus(session) === 'upcoming' ? 'not_checked_in' : slotStatus(session)}">${escape(statusWords(session))}</span>` +
+      '</div>' +
+      `<p>${escape(session.location)}</p>`;
+    // Section 6: a denied absence states its reason, and the delegate sees it.
+    if (session.decisionNote) {
+      const note = document.createElement('div');
+      note.className = 'decision';
+      note.textContent = session.decisionNote;
+      line.append(note);
+    }
+    list.append(line);
+  }
+}
+
+async function checkIn(sessionId) {
+  clearMessage();
+  const button = document.getElementById('checkin');
+  button.disabled = true;
+  const { ok, body } = await call(`/sessions/${sessionId}/checkin`, { method: 'POST' });
+  button.disabled = false;
+  if (!ok) {
+    say(body.error || 'That did not save. Try again.');
+    await refreshStanding();
+    return;
+  }
+  say('You are checked in.', 'good');
+  await refreshStanding();
 }
 
 /* ---------- session lifecycle ---------- */
@@ -378,7 +500,7 @@ function landOn(signedInAccount) {
   accountBar.hidden = false;
   clearMessage();
   if (account.role === 'karyakar') showSessions();
-  else show('delegate');
+  else showStanding();
 }
 
 function signOut(reason) {

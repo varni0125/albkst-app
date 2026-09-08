@@ -133,9 +133,25 @@ function attendanceRow({ sessionId, bkId, status, outcome, reason, note, source,
   };
 }
 
-// A delegate checking themselves in. Refused unless the window is open, which
-// is checked here and not in the browser.
+// Today in Alabama, not in UTC. A session that ended on the 13th must stop
+// accepting check-ins at midnight there, not at seven in the evening.
+function todayLocal() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Chicago',
+  }).format(new Date());
+}
+
+function hasEnded(session) {
+  const end = session.session_end_date || session.session_date;
+  return Boolean(end) && todayLocal() > end;
+}
+
+// A delegate checking themselves in. Refused unless the window is open and the
+// session has not already happened — both checked here, not in the browser.
 export async function selfCheckin(env, session, bkId) {
+  if (hasEnded(session)) {
+    return { ok: false, error: 'That session is over.' };
+  }
   if (session.checkin_state !== 'open') {
     return { ok: false, error: 'Check-in is not open for this session.' };
   }
@@ -201,4 +217,39 @@ export async function closeWindow(env, session, actorId) {
 
   await setWindow(env, session, 'closed_manually');
   return { markedAbsent: unmarked.length };
+}
+
+
+// One delegate's own view: every session, what they are marked as, and how
+// much of the absence allowance is gone. The browser is told the answer, never
+// asked to work it out.
+export async function standingFor(env, bkId) {
+  const [sessionRows, latest] = await Promise.all([
+    readTab(env, 'sessions'),
+    reconcile(env),
+  ]);
+
+  const sessions = sessionRows
+    .filter((row) => row.session_id)
+    .sort((a, b) => String(a.session_date).localeCompare(String(b.session_date)))
+    .map((row) => {
+      const record = latest.get(`${row.session_id}|${bkId}`) || null;
+      const status = record ? record.status : 'not_checked_in';
+      const ended = hasEnded(row);
+      return {
+        ...publicSession(row),
+        status,
+        ended,
+        absenceOutcome: record ? record.absence_outcome : '',
+        // Section 6: a denial states its reason, and the delegate is shown it.
+        decisionNote: record ? record.decision_note : '',
+        canCheckIn: row.checkin_state === 'open' && !ended && status !== 'present',
+      };
+    });
+
+  return {
+    sessions,
+    absencesUsed: sessions.filter((s) => s.status === 'absent').length,
+    absencesAllowed: 1,
+  };
 }

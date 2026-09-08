@@ -104,12 +104,20 @@
         <div id="roster"></div>
       </section>
 
-      <!-- Delegate placeholder until the standing screen exists -->
+      <!-- Delegate: their own year -->
       <section id="view-delegate" hidden>
-        <h1>Signed in</h1>
-        <p class="lede">
-          Your standing screen is still being built. Nothing to do here yet.
-        </p>
+        <h1>Your year</h1>
+        <p class="allowance" id="allowance"></p>
+
+        <div class="next-card" id="next-card" hidden>
+          <p class="next-when" id="next-when"></p>
+          <p class="next-where" id="next-where"></p>
+          <button type="button" id="checkin">Check in</button>
+          <p class="hint" id="next-hint"></p>
+        </div>
+
+        <div class="slots" id="slots"></div>
+        <div id="session-lines"></div>
       </section>
 
       <footer>Bal-Kishore Sevak Training &middot; Alabama</footer>

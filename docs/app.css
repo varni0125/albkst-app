@@ -391,3 +391,118 @@ footer {
   font-size: 15px;
   resize: vertical;
 }
+
+/* Delegate: their own year */
+.allowance {
+  margin: 0 0 22px;
+  font-size: 15px;
+  color: var(--color-text-muted);
+}
+
+.allowance[data-spent='true'] {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--color-gold-bg);
+  color: var(--color-gold-text);
+}
+
+.next-card {
+  margin-bottom: 26px;
+  padding: 18px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+}
+
+.next-when {
+  margin: 0 0 2px;
+  font-family: var(--font-serif);
+  font-size: 22px;
+}
+
+.next-where {
+  margin: 0 0 14px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.next-card button {
+  margin: 0;
+}
+
+.next-card .hint {
+  margin-top: 12px;
+}
+
+/* The year at a glance */
+.slots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 26px;
+}
+
+.slot {
+  flex: 1;
+  padding: 10px 4px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 6px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.slot[data-status='present'] {
+  border-color: var(--color-green-bg);
+  background: var(--color-green-bg);
+  color: var(--color-green-text);
+}
+
+.slot[data-status='absent'] {
+  border-color: var(--color-red-bg);
+  background: var(--color-red-bg);
+  color: var(--color-red-text);
+}
+
+.slot[data-status='excused'] {
+  border-color: var(--color-gold-bg);
+  background: var(--color-gold-bg);
+  color: var(--color-gold-text);
+}
+
+.slot[data-status='unscheduled'] {
+  color: var(--color-text-muted);
+  border-style: dashed;
+}
+
+.session-line {
+  padding: 14px 2px;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.session-line-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.session-line h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.session-line p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.session-line .decision {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--color-red-bg);
+  color: var(--color-red-text);
+  font-size: 14px;
+}

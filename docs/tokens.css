@@ -27,6 +27,9 @@
   /* Hairline borders */
   --color-hairline: #E0D5B8;
 
+  /* Quiet surface — disabled controls, states with no consequence */
+  --color-muted-surface: #F0E7D2;
+
   /* Typography — serif for headlines, names, questions;
      sans for UI chrome and answers */
   --font-serif: "Source Serif 4", Georgia, "Iowan Old Style", serif;

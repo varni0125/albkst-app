@@ -104,7 +104,8 @@ button {
 }
 
 button:disabled {
-  opacity: 0.55;
+  background: var(--color-muted-surface);
+  color: var(--color-text-muted);
   cursor: default;
 }
 
@@ -159,4 +160,234 @@ footer {
   color: var(--color-text-muted);
   font-size: 13px;
   text-align: center;
+}
+
+
+/* Signed-in chrome */
+.account-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-hairline);
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.back {
+  display: block;
+  margin: 0 0 14px;
+}
+
+/* Reveal control on a PIN field */
+.pin-wrap {
+  position: relative;
+}
+
+.pin-wrap input {
+  padding-right: 48px;
+}
+
+.reveal {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  transform: translateY(-50%);
+  border-radius: 4px;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.reveal svg {
+  display: block;
+  margin: 0 auto;
+}
+
+/* Session cards */
+.session-card {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.session-card h2 {
+  margin: 0 0 4px;
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.session-card p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+/* Check-in window */
+.window-panel {
+  margin: 24px 0 20px;
+  padding: 16px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+}
+
+.window-state {
+  margin: 0 0 12px;
+  font-weight: 500;
+}
+
+.window-panel button {
+  margin: 0;
+}
+
+.window-panel .hint {
+  margin-top: 10px;
+}
+
+.tally {
+  margin: 0 0 18px;
+  font-family: var(--font-serif);
+  font-size: 20px;
+}
+
+/* Roster */
+.center-group {
+  margin-bottom: 26px;
+}
+
+.center-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-hairline);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.person {
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.person-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 2px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.person-name {
+  flex: 1;
+  font-family: var(--font-serif);
+  font-size: 17px;
+}
+
+.person-meta {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.chip {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.chip[data-status='present'] {
+  background: var(--color-green-bg);
+  color: var(--color-green-text);
+}
+
+.chip[data-status='absent'] {
+  background: var(--color-red-bg);
+  color: var(--color-red-text);
+}
+
+.chip[data-status='excused'] {
+  background: var(--color-gold-bg);
+  color: var(--color-gold-text);
+}
+
+.chip[data-status='not_checked_in'] {
+  background: var(--color-muted-surface);
+  color: var(--color-text-muted);
+}
+
+/* Actions revealed under a tapped name */
+.person-actions {
+  padding: 4px 2px 16px;
+}
+
+.person-actions p {
+  margin: 0 0 10px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+}
+
+.action-row button {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-hairline);
+  background: none;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.action-row button[data-kind='danger'] {
+  border-color: var(--color-red-bg);
+  background: var(--color-red-bg);
+  color: var(--color-red-text);
+}
+
+.action-row button[data-kind='good'] {
+  border-color: var(--color-green-bg);
+  background: var(--color-green-bg);
+  color: var(--color-green-text);
+}
+
+.person-actions textarea {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 15px;
+  resize: vertical;
 }

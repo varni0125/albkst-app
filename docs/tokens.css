@@ -1,0 +1,35 @@
+/* BKST design tokens — see docs/spec.md section 9.
+   Every color in the app comes from here. Never write a hex value elsewhere. */
+
+:root {
+  /* Brand, structure, primary actions */
+  --color-navy: #1E3A5F;
+
+  /* Page surface */
+  --color-cream: #FAF3E3;
+
+  /* Gold — small highlights, soft warnings */
+  --color-gold-bg: #E8DBB8;
+  --color-gold-text: #7A5C14;
+
+  /* Red — problems only (below 80%, absence warnings) */
+  --color-red-bg: #F6DCDC;
+  --color-red-text: #8E2A2A;
+
+  /* Green — passing */
+  --color-green-bg: #DCEDE2;
+  --color-green-text: #2F6B4F;
+
+  /* Text */
+  --color-text: var(--color-navy);
+  --color-text-muted: #7A6E52;
+
+  /* Hairline borders */
+  --color-hairline: #E0D5B8;
+
+  /* Typography — serif for headlines, names, questions;
+     sans for UI chrome and answers */
+  --font-serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+}

@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Local secrets and environment
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+
+# Service account credentials
+*service-account*.json
+*service_account*.json
+credentials.json
+gcp-key.json
+
+# Cloudflare
+.wrangler/
+
+# OS / editor
+.DS_Store
+*.swp

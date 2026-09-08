@@ -29,7 +29,7 @@
 
   /* Typography — serif for headlines, names, questions;
      sans for UI chrome and answers */
-  --font-serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  --font-serif: "Source Serif 4", Georgia, "Iowan Old Style", serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
 }

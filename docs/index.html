@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BKST</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+    />
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <main>
+      <img
+        class="logo"
+        src="assets/kst-logo.png"
+        alt="Kishore Sevak Training"
+      />
+
+      <p class="message" id="message" data-tone="problem" hidden></p>
+
+      <!-- Sign in -->
+      <section id="view-login">
+        <h1>Sign in</h1>
+        <p class="lede">Use your BK ID and PIN.</p>
+        <form id="form-login">
+          <div class="field">
+            <label for="login-id">BK ID</label>
+            <input
+              id="login-id"
+              name="id"
+              type="text"
+              autocomplete="username"
+              autocapitalize="characters"
+              spellcheck="false"
+              required
+            />
+          </div>
+          <div class="field">
+            <label for="login-pin">PIN</label>
+            <input
+              id="login-pin"
+              name="pin"
+              type="password"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="6"
+              autocomplete="current-password"
+              required
+            />
+          </div>
+          <button type="submit">Sign in</button>
+        </form>
+      </section>
+
+      <!-- First login -->
+      <section id="view-setpin" hidden>
+        <h1>Choose your PIN</h1>
+        <p class="lede">
+          This is your first sign in, so pick a PIN you will remember. A
+          karyakar can reset it if you forget.
+        </p>
+        <form id="form-setpin">
+          <div class="field">
+            <label for="setpin-pin">New PIN</label>
+            <input
+              id="setpin-pin"
+              name="pin"
+              type="password"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="6"
+              autocomplete="new-password"
+              required
+            />
+            <p class="hint">
+              4 to 6 digits. Not all the same digit, and not in a row.
+            </p>
+          </div>
+          <div class="field">
+            <label for="setpin-confirm">Repeat it</label>
+            <input
+              id="setpin-confirm"
+              name="confirm"
+              type="password"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="6"
+              autocomplete="new-password"
+              required
+            />
+          </div>
+          <button type="submit">Set PIN and sign in</button>
+        </form>
+        <button class="linkish" type="button" id="setpin-cancel">
+          Back to sign in
+        </button>
+      </section>
+
+      <!-- Placeholder until the standing and session screens exist -->
+      <section id="view-signedin" hidden>
+        <h1>Signed in</h1>
+        <dl class="signed-in">
+          <dt>Name</dt>
+          <dd id="signedin-name"></dd>
+          <dt>ID</dt>
+          <dd id="signedin-id"></dd>
+          <dt>Role</dt>
+          <dd id="signedin-role"></dd>
+        </dl>
+        <p class="lede">
+          There is nothing else to see yet. The standing screen and the karyakar
+          session screens are still being built.
+        </p>
+        <button type="button" id="signout">Sign out</button>
+      </section>
+
+      <footer>Bal-Kishore Sevak Training &middot; Raleigh</footer>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

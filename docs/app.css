@@ -1,0 +1,162 @@
+/* Login screen.
+   Every colour here comes from tokens.css. No hex values in this file. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px 64px;
+  background: var(--color-cream);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+main {
+  width: 100%;
+  max-width: 380px;
+}
+
+.logo {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+  margin: 0 auto 40px;
+}
+
+h1 {
+  margin: 0 0 6px;
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.lede {
+  margin: 0 0 28px;
+  color: var(--color-text-muted);
+  font-size: 15px;
+}
+
+.field {
+  margin-bottom: 18px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 17px;
+}
+
+input:focus {
+  outline: 2px solid var(--color-navy);
+  outline-offset: -1px;
+  border-color: var(--color-navy);
+}
+
+/* Digits only, and wide enough to read back at a glance. */
+input[inputmode='numeric'] {
+  letter-spacing: 0.35em;
+}
+
+.hint {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+/* The one action-coloured element on the screen. */
+button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px 16px;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-navy);
+  color: var(--color-cream);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.message {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.message[data-tone='problem'] {
+  background: var(--color-red-bg);
+  color: var(--color-red-text);
+}
+
+.message[data-tone='notice'] {
+  background: var(--color-gold-bg);
+  color: var(--color-gold-text);
+}
+
+.message[data-tone='good'] {
+  background: var(--color-green-bg);
+  color: var(--color-green-text);
+}
+
+.signed-in dt {
+  margin-bottom: 2px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.signed-in dd {
+  margin: 0 0 16px;
+  font-family: var(--font-serif);
+  font-size: 20px;
+}
+
+.linkish {
+  width: auto;
+  margin: 8px 0 0;
+  padding: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+footer {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-hairline);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-align: center;
+}

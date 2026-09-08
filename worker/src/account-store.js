@@ -38,26 +38,33 @@ export class Account extends DurableObject {
   // Refuses to overwrite an existing PIN. Replacing one is a karyakar reset.
   async setPin(pinHash) {
     if (await this.ctx.storage.get('pinHash')) return { alreadySet: true };
-    await this.ctx.storage.put({ pinHash, attempts: 0, lockedUntil: 0 });
+    await this.ctx.storage.put({ pinHash, attempts: 0, lastFailureAt: 0, lockedUntil: 0 });
     return { alreadySet: false };
   }
 
   async resetPin() {
-    await this.ctx.storage.delete(['pinHash', 'attempts', 'lockedUntil']);
+    await this.ctx.storage.delete(['pinHash', 'attempts', 'lastFailureAt', 'lockedUntil']);
   }
 
+  // Failed attempts decay. Without this the count only ever climbs, so once
+  // someone had been locked out, every later typo would lock them again for
+  // fifteen minutes for the rest of the year.
   async recordFailure() {
-    const attempts = ((await this.ctx.storage.get('attempts')) || 0) + 1;
+    const now = Date.now();
+    const lastAt = (await this.ctx.storage.get('lastFailureAt')) || 0;
+    const stale = now - lastAt > LOCKOUT_MS;
+    const attempts = (stale ? 0 : (await this.ctx.storage.get('attempts')) || 0) + 1;
     const locked = attempts >= MAX_ATTEMPTS;
     await this.ctx.storage.put({
       attempts,
-      lockedUntil: locked ? Date.now() + LOCKOUT_MS : 0,
+      lastFailureAt: now,
+      lockedUntil: locked ? now + LOCKOUT_MS : 0,
     });
     return { attempts, remaining: Math.max(0, MAX_ATTEMPTS - attempts), locked };
   }
 
   async clearFailures() {
-    await this.ctx.storage.put({ attempts: 0, lockedUntil: 0 });
+    await this.ctx.storage.put({ attempts: 0, lastFailureAt: 0, lockedUntil: 0 });
   }
 }
 

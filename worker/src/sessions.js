@@ -38,14 +38,22 @@ export async function findSession(env, sessionId) {
   return rows.find((row) => row.session_id === sessionId) || null;
 }
 
-// The current attendance state, one entry per delegate per session: the last
-// row written wins.
+// The current attendance state, one entry per delegate per session: the most
+// recently marked row wins.
+//
+// Recency comes from marked_at, not from position in the sheet. Row order
+// would be simpler, but it would also mean that a karyakar sorting the
+// attendance tab silently changes who counts as present.
 async function reconcile(env) {
   const rows = await readTab(env, 'attendance');
   const latest = new Map();
   for (const row of rows) {
     if (!row.session_id || !row.bk_id) continue;
-    latest.set(`${row.session_id}|${row.bk_id}`, row);
+    const key = `${row.session_id}|${row.bk_id}`;
+    const held = latest.get(key);
+    if (!held || String(row.marked_at) >= String(held.marked_at)) {
+      latest.set(key, row);
+    }
   }
   return latest;
 }

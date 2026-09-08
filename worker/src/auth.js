@@ -1,12 +1,9 @@
-// Authentication: PIN hashing, login tokens, and lockout.
+// PIN hashing and login tokens.
 //
-// PIN hashes and failed-attempt counters live in KV, never in the Sheet. A
-// 4-digit PIN has only 10,000 possibilities, so a hash sitting in a
-// spreadsheet is recoverable by anyone who can open that spreadsheet.
+// Where the hashes and failed-attempt counters are kept is account-store.js.
 
-const PBKDF2_ITERATIONS = 250000;
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_SECONDS = 15 * 60;
+// 100,000 is the ceiling the Workers runtime allows.
+const PBKDF2_ITERATIONS = 100000;
 const TOKEN_HOURS = 12;
 
 const encoder = new TextEncoder();
@@ -89,38 +86,6 @@ export function pinProblem(pin) {
   const descending = digits.every((d, i) => i === 0 || d === digits[i - 1] - 1);
   if (ascending || descending) return 'PIN cannot be consecutive digits.';
   return null;
-}
-
-export const credentialKey = (id) => `pin:${id}`;
-const lockKey = (id) => `lock:${id}`;
-
-export async function getLockout(env, id) {
-  const raw = await env.AUTH.get(lockKey(id));
-  if (!raw) return { attempts: 0, locked: false };
-  const state = JSON.parse(raw);
-  return {
-    attempts: state.attempts,
-    locked: state.attempts >= MAX_ATTEMPTS,
-    minutesLeft: Math.max(
-      1,
-      Math.ceil((state.until - Date.now()) / 60000)
-    ),
-  };
-}
-
-export async function recordFailure(env, id) {
-  const current = await getLockout(env, id);
-  const attempts = current.attempts + 1;
-  await env.AUTH.put(
-    lockKey(id),
-    JSON.stringify({ attempts, until: Date.now() + LOCKOUT_SECONDS * 1000 }),
-    { expirationTtl: LOCKOUT_SECONDS }
-  );
-  return { attempts, remaining: Math.max(0, MAX_ATTEMPTS - attempts) };
-}
-
-export async function clearFailures(env, id) {
-  await env.AUTH.delete(lockKey(id));
 }
 
 // Login tokens are short-lived HS256 JWTs. They live in the browser's

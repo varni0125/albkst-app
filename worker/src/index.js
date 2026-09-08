@@ -3,23 +3,25 @@
 // Every decision about who someone is, what they may see, and what a grade is
 // happens here. The frontend renders what this returns and decides nothing.
 
-import { json, fail, preflight, readJson, corsHeaders } from './http.js';
+import { json, fail, preflight, readJson } from './http.js';
 import { lookupAccount, normalizeId } from './accounts.js';
+import { accountStore, Account } from './account-store.js';
 import {
   hashPin,
   verifyPin,
   pinProblem,
-  credentialKey,
-  getLockout,
-  recordFailure,
-  clearFailures,
   signToken,
   verifyToken,
 } from './auth.js';
 
+export { Account };
+
 // Deliberately identical for an unknown ID, a deactivated account, and a wrong
 // PIN. Anything more specific tells a guesser which IDs are worth attacking.
 const BAD_CREDENTIALS = 'That ID or PIN is not right.';
+
+const lockedMessage = (minutes) =>
+  `Too many attempts. Try again in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}, or ask a karyakar to reset your PIN.`;
 
 // Verifies the token, then re-checks the account against the roster. A
 // delegate dismissed an hour ago must not keep working on an unexpired token.
@@ -36,43 +38,36 @@ async function handleLogin(request, env) {
   const id = normalizeId(rawId);
   if (!id || !pin) return fail(env, 400, BAD_CREDENTIALS);
 
-  const lockout = await getLockout(env, id);
-  if (lockout.locked) {
-    return fail(
-      env,
-      429,
-      `Too many attempts. Try again in ${lockout.minutesLeft} minutes, or ask a karyakar to reset your PIN.`
-    );
-  }
+  const store = accountStore(env, id);
+  const state = await store.load();
+  if (state.locked) return fail(env, 429, lockedMessage(state.minutesLeft));
 
   const account = await lookupAccount(env, id);
-  const stored = account ? await env.AUTH.get(credentialKey(id)) : null;
 
   // An unknown ID is still run through a hash so that a wrong ID and a wrong
   // PIN take the same amount of time to answer.
-  if (!account || !stored) {
+  if (!account || !state.hasPin) {
     await verifyPin(pin, await hashPin('000000'));
-    if (account && !stored) {
+    if (account && !state.hasPin) {
       return fail(env, 409, 'No PIN set for this ID yet.', {
         needsPinSetup: true,
       });
     }
-    await recordFailure(env, id);
+    await store.recordFailure();
     return fail(env, 401, BAD_CREDENTIALS);
   }
 
-  if (!(await verifyPin(pin, stored))) {
-    const { remaining } = await recordFailure(env, id);
+  if (!(await verifyPin(pin, state.pinHash))) {
+    const { remaining, locked } = await store.recordFailure();
+    if (locked) return fail(env, 429, lockedMessage(15));
     return fail(
       env,
       401,
-      remaining > 0
-        ? `${BAD_CREDENTIALS} ${remaining} ${remaining === 1 ? 'try' : 'tries'} left before this ID locks for 15 minutes.`
-        : 'This ID is locked for 15 minutes. Ask a karyakar to reset your PIN.'
+      `${BAD_CREDENTIALS} ${remaining} ${remaining === 1 ? 'try' : 'tries'} left before this ID locks for 15 minutes.`
     );
   }
 
-  await clearFailures(env, id);
+  await store.clearFailures();
   return json(env, {
     token: await signToken(env, { sub: id, role: account.role }),
     account,
@@ -92,7 +87,9 @@ async function handleSetPin(request, env) {
   const account = await lookupAccount(env, id);
   if (!account) return fail(env, 401, BAD_CREDENTIALS);
 
-  if (await env.AUTH.get(credentialKey(id))) {
+  const store = accountStore(env, id);
+  const { alreadySet } = await store.setPin(await hashPin(pin));
+  if (alreadySet) {
     return fail(
       env,
       409,
@@ -100,8 +97,6 @@ async function handleSetPin(request, env) {
     );
   }
 
-  await env.AUTH.put(credentialKey(id), await hashPin(pin));
-  await clearFailures(env, id);
   return json(env, {
     token: await signToken(env, { sub: id, role: account.role }),
     account,

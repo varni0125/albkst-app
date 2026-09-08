@@ -48,7 +48,8 @@ screen and are never told one exists.
 ### Delegate
 - **Username:** BK ID (canonical, avoids name collisions and spelling variants)
 - **Password:** 4–6 digit PIN the delegate sets on first login; length is the
-  delegate's choice
+  delegate's choice. Repeated (`1111`) and consecutive (`1234`) PINs are
+  refused
 - BK ID alone is not a secret — karyakars know it, it appears on forms — so it
   cannot serve as the password on an app that holds graded assessments
 - Karyakar can reset a forgotten PIN
@@ -65,16 +66,31 @@ screen and are never told one exists.
 
 ### Credential storage
 
-**PIN hashes live in Cloudflare KV, not the Sheet.** A 4-digit PIN has only
-10,000 possibilities, so a hash sitting in a spreadsheet is recoverable in
-under a second by anyone who can open that spreadsheet — and karyakars can
-open it. KV is readable only by the Worker.
+**PIN hashes never touch the Sheet.** A 4-digit PIN has only 10,000
+possibilities, so a hash sitting in a spreadsheet is recoverable in under a
+second by anyone who can open that spreadsheet — and karyakars can open it.
 
-Hashing is PBKDF2-SHA256 with a per-user random salt. Five failed attempts
-locks that ID for 15 minutes, which is the real defense against guessing a
-short PIN.
+They live instead in a Cloudflare Durable Object, one per account, readable
+only by the Worker. Durable Objects rather than KV because the same object
+holds the failed-attempt counter: KV is eventually consistent, so rapid
+increments overwrite each other and a lockout never trips.
+
+Hashing is PBKDF2-SHA256 with a per-user random salt, at 100,000 iterations —
+the ceiling the Workers runtime allows. Five failed attempts locks that ID for
+15 minutes, which is the real defense against guessing a short PIN.
 
 The Sheet holds roster and program data only. It never holds a credential.
+
+### Accepted risk: first login
+
+Whoever reaches an account first sets its PIN, and BK IDs are not secret. So
+someone who knows a delegate's BK ID could claim that account before the
+delegate does.
+
+Accepted for the pilot rather than fixed. All nineteen delegates log in at
+session one, which closes the window almost immediately, and requiring a
+karyakar to unlock each account first adds friction to the one session where
+everyone is already busy. Revisit if the pilot grows past one mandal.
 
 ---
 

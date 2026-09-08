@@ -2,10 +2,15 @@ name = "bkst-api"
 main = "src/index.js"
 compatibility_date = "2026-09-08"
 
-# Credential hashes and failed-attempt counters. Never the Sheet.
-[[kv_namespaces]]
-binding = "AUTH"
-id = "be25308410fb483b8dd3292b8c017bab"
+# One object per account, holding the PIN hash and the failed-attempt counter.
+# Strongly consistent, unlike KV, which loses concurrent increments.
+[[durable_objects.bindings]]
+name = "ACCOUNT"
+class_name = "Account"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Account"]
 
 [vars]
 # The GitHub Pages origin allowed to call this Worker.

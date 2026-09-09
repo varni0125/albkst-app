@@ -798,6 +798,12 @@ function renderStanding(standing) {
           : 'You are marked absent for this session.';
     } else hint.textContent = '';
 
+    // Section 6: a denial states its reason to the delegate. It belongs here,
+    // where they already are, not behind a tap they have no reason to make.
+    const reason = document.getElementById('next-reason');
+    reason.textContent = next.decisionNote || '';
+    reason.hidden = !next.decisionNote;
+
     renderRequest(next);
   }
 
@@ -857,6 +863,7 @@ async function sendRequest(sessionId, reason) {
   });
   if (!ok) return say(body.error || 'That request did not send.');
   say('Request sent. A karyakar will decide.', 'good');
+  lastStanding = body.standing;
   renderStanding(body.standing);
 }
 
@@ -865,6 +872,7 @@ async function cancelRequest(sessionId) {
   const { ok, body } = await call(`/sessions/${sessionId}/cancel-request`, { method: 'POST' });
   if (!ok) return say(body.error || 'Could not cancel that.');
   say('Request cancelled.', 'notice');
+  lastStanding = body.standing;
   renderStanding(body.standing);
 }
 
@@ -899,7 +907,10 @@ function renderSessionLines(sessions) {
       `<h2>${escape(dateRange(session.startDate, session.endDate))}</h2>` +
       `<span class="chip" data-status="${status === 'upcoming' ? 'not_checked_in' : status}">${escape(statusWords(session))}</span>` +
       '</div>' +
-      `<p>${escape(session.location)}</p>`;
+      `<p>${escape(session.location)}</p>` +
+      (session.decisionNote
+        ? `<div class="decision">${escape(session.decisionNote)}</div>`
+        : '');
     line.addEventListener('click', () => openMySession(session.id));
     list.append(line);
   }
@@ -935,13 +946,60 @@ function openMySession(sessionId) {
     body.append(note);
   }
 
-  if (session.request) {
+  if (session.request && session.request.state === 'pending') {
+    const p = document.createElement('p');
+    p.className = 'empty';
+    p.textContent = `Absence requested: "${session.request.reason}". Waiting on a karyakar.`;
+    body.append(p);
+
+    const cancel = document.createElement('button');
+    cancel.className = 'linkish';
+    cancel.type = 'button';
+    cancel.textContent = 'Cancel this request';
+    cancel.addEventListener('click', async () => {
+      await cancelRequest(session.id);
+      openMySession(session.id);
+    });
+    body.append(cancel);
+  } else if (session.request) {
+    // Decided. Say so, rather than leaving the absent option unexplained.
     const p = document.createElement('p');
     p.className = 'empty';
     p.textContent =
-      session.request.state === 'pending'
-        ? `Absence requested: "${session.request.reason}". Waiting on a karyakar.`
-        : `Absence request ${session.request.state}.`;
+      session.request.state === 'approved'
+        ? 'Your absence request was approved.'
+        : 'Your absence request was not approved. Ask a karyakar if that needs revisiting.';
+    body.append(p);
+  } else if (session.canRequest) {
+    // Any session can be requested from here, not just whichever one is next.
+    const holder = document.createElement('div');
+    holder.className = 'request-state';
+    const open = document.createElement('button');
+    open.className = 'linkish';
+    open.type = 'button';
+    open.textContent = 'Cannot make this one? Request an absence';
+    open.addEventListener('click', () => {
+      holder.textContent = '';
+      const box = document.createElement('textarea');
+      box.rows = 3;
+      box.placeholder = 'Why you cannot come. A karyakar reads this.';
+      holder.append(box);
+      const send = document.createElement('button');
+      send.type = 'button';
+      send.textContent = 'Send request';
+      send.addEventListener('click', async () => {
+        await sendRequest(session.id, box.value);
+        openMySession(session.id);
+      });
+      holder.append(send);
+      box.focus();
+    });
+    holder.append(open);
+    body.append(holder);
+  } else if (!session.ended && session.status === 'not_checked_in') {
+    const p = document.createElement('p');
+    p.className = 'empty';
+    p.textContent = 'This session has started, so a request can no longer be sent. Ask a karyakar.';
     body.append(p);
   }
 }

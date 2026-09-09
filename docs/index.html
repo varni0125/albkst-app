@@ -6,12 +6,10 @@
     <title>BKST</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
-    />
-    <link rel="stylesheet" href="tokens.css?v=7" />
-    <link rel="stylesheet" href="app.css?v=7" />
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" />
+    <link rel="stylesheet" href="tokens.css?v=8" />
+    <link rel="stylesheet" href="app.css?v=8" />
   </head>
   <body>
     <main>
@@ -25,8 +23,7 @@
         <button class="linkish" type="button" id="signout">Sign out</button>
       </div>
 
-      <p class="message" id="message" data-tone="problem" role="status"
-        aria-live="polite" hidden></p>
+      <p class="message" id="message" data-tone="problem" role="status" aria-live="polite" hidden></p>
 
       <!-- Sign in -->
       <section id="view-login">
@@ -43,8 +40,7 @@
             <div class="pin-wrap">
               <input id="login-pin" name="pin" type="password" inputmode="numeric"
                 pattern="[0-9]*" maxlength="6" autocomplete="current-password" required />
-              <button class="reveal" type="button" data-reveals="login-pin"
-                aria-label="Show PIN"></button>
+              <button class="reveal" type="button" data-reveals="login-pin" aria-label="Show PIN"></button>
             </div>
           </div>
           <button type="submit">Sign in</button>
@@ -64,8 +60,7 @@
             <div class="pin-wrap">
               <input id="setpin-pin" name="pin" type="password" inputmode="numeric"
                 pattern="[0-9]*" maxlength="6" autocomplete="new-password" required />
-              <button class="reveal" type="button" data-reveals="setpin-pin"
-                aria-label="Show PIN"></button>
+              <button class="reveal" type="button" data-reveals="setpin-pin" aria-label="Show PIN"></button>
             </div>
             <p class="hint">4 to 6 digits. Not all the same digit, and not in a row.</p>
           </div>
@@ -74,8 +69,7 @@
             <div class="pin-wrap">
               <input id="setpin-confirm" name="confirm" type="password" inputmode="numeric"
                 pattern="[0-9]*" maxlength="6" autocomplete="new-password" required />
-              <button class="reveal" type="button" data-reveals="setpin-confirm"
-                aria-label="Show PIN"></button>
+              <button class="reveal" type="button" data-reveals="setpin-confirm" aria-label="Show PIN"></button>
             </div>
           </div>
           <button type="submit">Set PIN and sign in</button>
@@ -83,7 +77,7 @@
         <button class="linkish" type="button" id="setpin-cancel">Back to sign in</button>
       </section>
 
-      <!-- Karyakar: the year -->
+      <!-- Karyakar: sessions -->
       <section id="view-sessions" hidden>
         <h1>Sessions</h1>
         <p class="lede">Fall term. Spring dates are not set yet.</p>
@@ -92,9 +86,7 @@
 
       <!-- Karyakar: one session -->
       <section id="view-session" hidden>
-        <button class="linkish back" type="button" id="session-back">
-          All sessions
-        </button>
+        <button class="linkish back" type="button" id="session-back">All sessions</button>
         <h1 id="session-title"></h1>
         <p class="lede" id="session-where"></p>
 
@@ -105,21 +97,52 @@
         </div>
 
         <div class="qr-panel" id="qr-panel" hidden>
-          <button class="quiet" type="button" id="qr-generate">
-            Generate check-in code
-          </button>
+          <button class="quiet" type="button" id="qr-generate">Generate check-in code</button>
           <div id="qr-holder" hidden>
             <img id="qr-image" alt="Check-in code" />
             <p class="qr-countdown" id="qr-countdown"></p>
             <button class="linkish" type="button" id="qr-save">Save image</button>
-            <p class="hint">
-              Delegates scan this with their own camera app.
-            </p>
+            <p class="hint">Delegates scan this with their own camera app.</p>
           </div>
         </div>
 
         <p class="tally" id="session-tally"></p>
         <div id="roster"></div>
+      </section>
+
+      <!-- Karyakar: the directory -->
+      <section id="view-delegates" hidden>
+        <h1>Delegates</h1>
+        <p class="lede" id="delegates-count"></p>
+        <div class="field">
+          <label class="sr-only" for="delegate-search">Search</label>
+          <input id="delegate-search" type="search" placeholder="Search by name" autocomplete="off" />
+        </div>
+        <div id="delegate-list"></div>
+      </section>
+
+      <!-- Karyakar: one delegate -->
+      <section id="view-delegate-detail" hidden>
+        <button class="linkish back" type="button" id="detail-back">All delegates</button>
+        <h1 id="detail-name"></h1>
+        <p class="lede" id="detail-meta"></p>
+        <p class="allowance" id="detail-allowance"></p>
+        <div id="detail-history"></div>
+        <button class="linkish" type="button" id="detail-reset">Reset this PIN</button>
+      </section>
+
+      <!-- Karyakar: scores -->
+      <section id="view-scores" hidden>
+        <h1>Scores</h1>
+        <p class="lede">Session grades. Nothing to enter yet.</p>
+        <div id="score-list"></div>
+      </section>
+
+      <!-- Karyakar: needs attention -->
+      <section id="view-dashboard" hidden>
+        <h1>Needs attention</h1>
+        <p class="lede" id="dashboard-lede"></p>
+        <div id="dashboard-body"></div>
       </section>
 
       <!-- Delegate: their own year -->
@@ -128,23 +151,37 @@
         <p class="allowance" id="allowance"></p>
 
         <div class="next-card" id="next-card" hidden>
-          <p class="next-when" id="next-when"></p>
+          <div class="next-head">
+            <p class="next-when" id="next-when"></p>
+            <p class="next-countdown" id="next-countdown"></p>
+          </div>
           <p class="next-where" id="next-where"></p>
           <button type="button" id="checkin">Check in</button>
           <p class="hint" id="next-hint"></p>
           <p class="hint" id="next-scan" hidden>
             Scan the check-in code on a karyakar's screen with your camera.
           </p>
+          <div id="next-request"></div>
         </div>
 
         <div class="slots" id="slots"></div>
         <div id="session-lines"></div>
       </section>
 
+      <!-- Delegate: one of their sessions -->
+      <section id="view-my-session" hidden>
+        <button class="linkish back" type="button" id="my-session-back">Your year</button>
+        <h1 id="my-session-title"></h1>
+        <p class="lede" id="my-session-where"></p>
+        <div id="my-session-body"></div>
+      </section>
+
       <footer>Bal-Kishore Sevak Training &middot; Alabama</footer>
     </main>
 
-    <script src="qr.js?v=7"></script>
-    <script src="app.js?v=7"></script>
+    <nav class="tabs" id="tabs" hidden></nav>
+
+    <script src="qr.js?v=8"></script>
+    <script src="app.js?v=8"></script>
   </body>
 </html>

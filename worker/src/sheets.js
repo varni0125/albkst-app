@@ -23,6 +23,7 @@ const TAB_MAX_AGE_MS = {
   sessions: 15000,
   attendance: 3000,
   scores: 5000,
+  absence_requests: 2000,
 };
 const tabCache = new Map(); // tab -> { rows, at }
 const headerCache = new Map(); // tab -> headers, which never change
@@ -131,10 +132,14 @@ async function headersFor(env, tab) {
 
 // Every row of a tab as an object keyed by the header row. `_row` is the
 // spreadsheet row number, which updateRow needs.
-export async function readTab(env, tab) {
+// `fresh` skips the cache. Needed wherever a decision depends on current
+// state: the cache lives in one isolate and a write only clears that one, so
+// another isolate can serve a stale copy and let the same decision be applied
+// twice.
+export async function readTab(env, tab, { fresh = false } = {}) {
   const cached = tabCache.get(tab);
   const maxAge = TAB_MAX_AGE_MS[tab] ?? 5000;
-  if (cached && Date.now() - cached.at < maxAge) return cached.rows;
+  if (!fresh && cached && Date.now() - cached.at < maxAge) return cached.rows;
 
   const data = await api(env, `/values/${encodeURIComponent(tab)}`);
   const [headers, ...rows] = data.values || [[]];

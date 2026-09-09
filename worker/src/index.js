@@ -19,6 +19,13 @@ import {
   standingFor,
 } from './sessions.js';
 import { issueCode } from './checkin-code.js';
+import {
+  createRequest,
+  cancelRequest,
+  decideRequest,
+  pendingRequests,
+} from './requests.js';
+import { directory, delegateDetail, dashboard } from './people.js';
 
 export { Account };
 
@@ -158,6 +165,56 @@ export default {
         return json(env, { sessions: await listSessions(env) });
       }
 
+      if (method === 'GET' && path === '/delegates') {
+        return karyakarOnly() || json(env, await directory(env));
+      }
+
+      const delegateMatch = path.match(/^\/delegates\/([A-Za-z0-9_-]+)$/);
+      if (method === 'GET' && delegateMatch) {
+        const denied = karyakarOnly();
+        if (denied) return denied;
+        const detail = await delegateDetail(env, delegateMatch[1]);
+        if (!detail) return fail(env, 404, 'No such delegate.');
+        return json(env, detail);
+      }
+
+      if (method === 'GET' && path === '/dashboard') {
+        return karyakarOnly() || json(env, await dashboard(env));
+      }
+
+      if (method === 'GET' && path === '/requests') {
+        return karyakarOnly() || json(env, { requests: await pendingRequests(env) });
+      }
+
+      const decisionMatch = path.match(/^\/requests\/([A-Za-z0-9-]+)\/decision$/);
+      if (method === 'POST' && decisionMatch) {
+        const denied = karyakarOnly();
+        if (denied) return denied;
+        const { decision, note } = await readJson(request);
+        const result = await decideRequest(env, decisionMatch[1], decision, note, account.id);
+        if (result.error) return fail(env, 400, result.error);
+
+        // An approved request is an excused absence, recorded straight away.
+        if (decision === 'approved') {
+          const session = await findSession(env, result.request.session_id);
+          if (session) {
+            await markAttendance(
+              env,
+              session,
+              {
+                bkId: result.request.bk_id,
+                status: 'absent',
+                absenceOutcome: 'approved',
+                reason: result.request.reason,
+                decisionNote: String(note || '').trim(),
+              },
+              account.id
+            );
+          }
+        }
+        return json(env, { ok: true, dashboard: await dashboard(env) });
+      }
+
       const sessionMatch = path.match(/^\/sessions\/([A-Za-z0-9_-]+)(\/[a-z-]+)?$/);
       if (sessionMatch) {
         const session = await findSession(env, sessionMatch[1]);
@@ -210,6 +267,25 @@ export default {
             return fail(env, 409, 'Open check-in first, then generate a code.');
           }
           return json(env, await issueCode(env, session.session_id));
+        }
+
+        if (method === 'POST' && action === '/absence-request') {
+          if (account.role !== 'delegate') {
+            return fail(env, 403, 'Only delegates request an absence.');
+          }
+          const { reason } = await readJson(request);
+          const result = await createRequest(env, session, account.id, reason);
+          if (result.error) return fail(env, 409, result.error);
+          return json(env, { ok: true, standing: await standingFor(env, account.id) });
+        }
+
+        if (method === 'POST' && action === '/cancel-request') {
+          if (account.role !== 'delegate') {
+            return fail(env, 403, 'Only delegates cancel their own request.');
+          }
+          const result = await cancelRequest(env, session, account.id);
+          if (result.error) return fail(env, 409, result.error);
+          return json(env, { ok: true, standing: await standingFor(env, account.id) });
         }
 
         if (method === 'POST' && action === '/checkin') {

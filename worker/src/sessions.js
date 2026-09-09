@@ -7,6 +7,7 @@
 
 import { readTab, appendRows, updateRowWhere } from './sheets.js';
 import { codeIsValid } from './checkin-code.js';
+import { deniedFor, requestsFor, requestState, todayLocal } from './requests.js';
 
 const CENTER_ORDER = ['Birmingham', 'Dothan', 'Huntsville', 'Mobile', 'Montgomery'];
 const isTrue = (value) => String(value).trim().toLowerCase() === 'true';
@@ -179,14 +180,6 @@ function attendanceRow({ sessionId, bkId, status, outcome, reason, note, source,
   };
 }
 
-// Today in Alabama, not in UTC. A session that ended on the 13th must stop
-// accepting check-ins at midnight there, not at seven in the evening.
-function todayLocal() {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Chicago',
-  }).format(new Date());
-}
-
 function hasEnded(session) {
   const end = session.session_end_date || session.session_date;
   return Boolean(end) && todayLocal() > end;
@@ -245,9 +238,10 @@ export async function markAttendance(env, session, entry, actorId) {
 // request recorded. Reversible: a later row wins, and the automatic row stays
 // in the ledger as history.
 export async function closeWindow(env, session, actorId) {
-  const [delegates, latest] = await Promise.all([
+  const [delegates, latest, denied] = await Promise.all([
     readTab(env, 'delegates'),
     reconcile(env),
+    deniedFor(env, session.session_id),
   ]);
 
   const unmarked = delegates
@@ -262,7 +256,10 @@ export async function closeWindow(env, session, actorId) {
         sessionId: session.session_id,
         bkId: row.bk_id,
         status: 'absent',
-        outcome: 'no_request',
+        // Someone whose request was refused and who then did not come is not
+        // a plain no-show: there was a decision, and it carries its reason.
+        outcome: denied.has(row.bk_id) ? 'denied' : 'no_request',
+        note: denied.get(row.bk_id) || '',
         source: 'karyakar_marked',
         actorId,
       })
@@ -278,10 +275,12 @@ export async function closeWindow(env, session, actorId) {
 // much of the absence allowance is gone. The browser is told the answer, never
 // asked to work it out.
 export async function standingFor(env, bkId) {
-  const [sessionRows, latest] = await Promise.all([
+  const [sessionRows, latest, myRequests] = await Promise.all([
     readTab(env, 'sessions'),
     reconcile(env),
+    requestsFor(env, bkId),
   ]);
+  const today = todayLocal();
 
   const sessions = sessionRows
     .filter((row) => row.session_id)
@@ -290,13 +289,24 @@ export async function standingFor(env, bkId) {
       const record = latest.get(`${row.session_id}|${bkId}`) || null;
       const status = record ? record.status : 'not_checked_in';
       const ended = hasEnded(row);
+      const request = requestState(myRequests, row.session_id);
+      const started = Boolean(row.session_date) && today >= row.session_date;
+      const live = request && request.state !== 'cancelled' ? request : null;
+
       return {
         ...publicSession(row),
         status,
         ended,
+        daysAway: daysUntil(row.session_date, today),
         absenceOutcome: record ? record.absence_outcome : '',
         // Section 6: a denial states its reason, and the delegate is shown it.
-        decisionNote: record ? record.decision_note : '',
+        decisionNote: record ? record.decision_note : (live ? live.decision_note : ''),
+        request: live
+          ? { state: live.state, reason: live.reason, note: live.decision_note }
+          : null,
+        // Requests close when the session begins, and there is nothing to ask
+        // about once you are already marked.
+        canRequest: !started && !live && status === 'not_checked_in',
         canCheckIn: row.checkin_state === 'open' && !ended && status !== 'present',
       };
     });
@@ -306,4 +316,14 @@ export async function standingFor(env, bkId) {
     absencesUsed: sessions.filter((s) => s.status === 'absent').length,
     absencesAllowed: 1,
   };
+}
+
+// Whole days from today to a session, in Alabama. Negative once it has begun.
+function daysUntil(startDate, today) {
+  if (!startDate) return null;
+  const toUtc = (iso) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((toUtc(startDate) - toUtc(today)) / 86400000);
 }

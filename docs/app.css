@@ -574,3 +574,209 @@ footer {
   margin-top: 8px;
   cursor: pointer;
 }
+
+/* Tab bar. Fixed to the bottom, where a thumb is. */
+.tabs {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--color-hairline);
+  background: var(--color-cream);
+}
+
+.tabs button {
+  flex: 1;
+  margin: 0;
+  padding: 10px 4px 12px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tabs button[aria-current='page'] {
+  color: var(--color-navy);
+}
+
+.tabs svg {
+  display: block;
+  margin: 0 auto 3px;
+}
+
+.tab-badge {
+  display: inline-block;
+  min-width: 17px;
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--color-red-bg);
+  color: var(--color-red-text);
+  font-size: 10px;
+}
+
+body.has-tabs {
+  padding-bottom: 96px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Directory */
+.person-link {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 2px;
+  border: none;
+  border-bottom: 1px solid var(--color-hairline);
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.person-link .person-name {
+  flex: 1;
+}
+
+/* Delegate detail and dashboard cards */
+.record {
+  padding: 14px 2px;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.record-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.record-head h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.record p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.request-card {
+  margin-bottom: 14px;
+  padding: 16px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+}
+
+.request-card h2 {
+  margin: 0 0 2px;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.request-card .when {
+  margin: 0 0 10px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.request-card blockquote {
+  margin: 0 0 14px;
+  padding-left: 12px;
+  border-left: 2px solid var(--color-hairline);
+  font-family: var(--font-serif);
+  font-size: 16px;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  margin: 26px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-hairline);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.empty {
+  padding: 20px 0;
+  color: var(--color-text-muted);
+  font-size: 15px;
+}
+
+/* Delegate: next session */
+.next-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.next-countdown {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.request-state {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.request-state p {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.request-state textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 15px;
+  resize: vertical;
+}
+
+.session-line-link {
+  display: block;
+  width: 100%;
+  padding: 14px 2px;
+  border: none;
+  border-bottom: 1px solid var(--color-hairline);
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+}

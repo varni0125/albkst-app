@@ -351,9 +351,32 @@ function countTo(element, value, total) {
   tick();
 }
 
+// Re-rendering the roster changes what is above a row, so the row you are
+// looking at slides out from under your finger. Measure it before and after
+// and put it back where it was. The article's locked camera rule, applied to
+// a list rather than to footage.
+function keepRowInPlace(bkId, render) {
+  const find = () => document.querySelector(`.person[data-bk="${bkId}"]`);
+  const before = find()?.getBoundingClientRect().top;
+  render();
+  const after = find()?.getBoundingClientRect().top;
+  if (before !== undefined && after !== undefined && before !== after) {
+    window.scrollBy(0, after - before);
+  }
+}
+
 function renderRoster(roster) {
   const container = document.getElementById('roster');
   container.textContent = '';
+
+  if (!roster.total) {
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.textContent = 'No active delegates on the roster.';
+    container.append(empty);
+    return;
+  }
+
   for (const group of roster.groups) {
     const section = document.createElement('div');
     section.className = 'center-group';
@@ -377,6 +400,7 @@ function statusLabel(person) {
 function personRow(person) {
   const wrap = document.createElement('div');
   wrap.className = 'person';
+  wrap.dataset.bk = person.bkId;
   const [status, label] = statusLabel(person);
   const row = document.createElement('button');
   row.className = 'person-row';
@@ -392,8 +416,10 @@ function personRow(person) {
   row.addEventListener('click', () => {
     openPerson = openPerson === person.bkId ? null : person.bkId;
     // Redrawn from what is already loaded, so a tap does not wait on a read.
-    if (lastSession && lastRoster) renderSession(lastSession, lastRoster);
-    else refreshSession();
+    keepRowInPlace(person.bkId, () => {
+      if (lastSession && lastRoster) renderSession(lastSession, lastRoster);
+      else refreshSession();
+    });
   });
   wrap.append(row);
   if (openPerson === person.bkId) wrap.append(personActions(person));
@@ -475,7 +501,11 @@ async function mark(person, entry) {
   clearMessage();
   const rollback = lastRoster;
   openPerson = null;
-  if (lastRoster) renderSession(lastSession, guessRoster(lastRoster, person, entry));
+  if (lastRoster) {
+    keepRowInPlace(person.bkId, () =>
+      renderSession(lastSession, guessRoster(lastRoster, person, entry))
+    );
+  }
 
   const { ok, body } = await call(`/sessions/${openSessionId}/attendance`, {
     method: 'POST',
@@ -483,11 +513,11 @@ async function mark(person, entry) {
   });
 
   if (!ok) {
-    if (rollback) renderSession(lastSession, rollback);
+    if (rollback) keepRowInPlace(person.bkId, () => renderSession(lastSession, rollback));
     return say(body.error || 'That mark did not save.');
   }
   say(`${person.name} marked.`, 'good');
-  renderSession(lastSession, body.roster);
+  keepRowInPlace(person.bkId, () => renderSession(lastSession, body.roster));
 }
 
 // What the roster will look like once the Worker agrees. Counts are adjusted
@@ -533,6 +563,13 @@ async function setWindow(state) {
     body: JSON.stringify({ state }),
   });
   if (!ok) return say(body.error || 'Could not change the check-in window.');
+  if (state === 'open') {
+    // Opening check-in and showing a code are one intention, and this happens
+    // with twenty-five people waiting. Two taps is one too many.
+    await refreshSession();
+    await generateCode();
+    return;
+  }
   if (body.markedAbsent > 0) {
     say(
       `${body.markedAbsent} ${body.markedAbsent === 1 ? 'delegate was' : 'delegates were'} marked absent. Tap a name to change it.`,
@@ -592,6 +629,7 @@ function clearQr() {
   qrTimer = null;
   qrBlob = null;
   document.getElementById('qr-holder').hidden = true;
+  document.getElementById('qr-generate').textContent = 'Generate check-in code';
 }
 
 async function generateCode() {
@@ -606,6 +644,7 @@ async function generateCode() {
     qrBlob = blob;
   }, 'image/png');
   document.getElementById('qr-holder').hidden = false;
+  document.getElementById('qr-generate').textContent = 'New code';
 
   const expiresAt = Date.now() + body.secondsLeft * 1000;
   const countdownEl = document.getElementById('qr-countdown');
@@ -744,7 +783,9 @@ async function showScores() {
   const note = document.createElement('p');
   note.className = 'empty';
   note.textContent =
-    'Score entry is still being built. Session one carries no quiz and no homework, so it will have no grade at all.';
+    'Score entry is still being built. When it is, each session shows the points ' +
+    'entered and the grade computed from them. Session one carries no quiz and no ' +
+    'homework, so it will have no grade at all and will not count towards the year.';
   list.append(note);
 }
 
@@ -794,9 +835,14 @@ function renderDashboard(data) {
   }
 
   if (!data.requests.length && !data.allowanceSpent.length) {
+    // Says what would be here, so an empty screen reads as working rather
+    // than as broken.
     const empty = document.createElement('p');
     empty.className = 'empty';
-    empty.textContent = 'No requests waiting, and nobody has used an absence.';
+    empty.textContent =
+      'Absence requests appear here when a delegate sends one, and anyone who ' +
+      'uses an absence stays listed for the rest of the year. Session grades ' +
+      'below 80 per cent will join them once scores are being entered.';
     body.append(empty);
   }
 }
@@ -1288,7 +1334,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=13').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=14').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

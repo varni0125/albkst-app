@@ -15,6 +15,7 @@ import {
   closeWindow,
   selfCheckin,
   markAttendance,
+  attendanceProblem,
   standingFor,
 } from './sessions.js';
 import { issueCode } from './checkin-code.js';
@@ -194,9 +195,8 @@ export default {
           const denied = karyakarOnly();
           if (denied) return denied;
           const entry = await readJson(request);
-          if (!entry.bkId || !['present', 'absent'].includes(entry.status)) {
-            return fail(env, 400, 'A delegate and a status are needed.');
-          }
+          const problem = await attendanceProblem(env, entry);
+          if (problem) return fail(env, 400, problem);
           await markAttendance(env, session, entry, account.id);
           return json(env, { roster: await rosterFor(env, session.session_id) });
         }

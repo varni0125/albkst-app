@@ -261,9 +261,10 @@ function personRow(person) {
   const used = person.absencesUsed
     ? ` &middot; ${person.absencesUsed} of 1 absence used`
     : '';
+  const grade = person.grade ? `${escape(person.grade)}th` : '';
   row.innerHTML =
     `<span class="person-name">${escape(person.name)}</span>` +
-    `<span class="person-meta">${escape(person.grade)}th${used}</span>` +
+    `<span class="person-meta">${grade}${used}</span>` +
     `<span class="chip" data-status="${status}">${label}</span>`;
   row.addEventListener('click', () => {
     openPerson = openPerson === person.bkId ? null : person.bkId;
@@ -654,6 +655,7 @@ function signOut(reason) {
   openSessionId = null;
   openPerson = null;
   stopPolling();
+  clearQr();
   accountBar.hidden = true;
   show('login');
   if (reason) say(reason, 'notice');

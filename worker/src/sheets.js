@@ -173,25 +173,34 @@ export async function appendRows(env, tab, records) {
   invalidate(tab);
 }
 
-// Read-modify-write of one row. Only for tabs a single karyakar edits at a
-// time, never for attendance.
-export async function updateRow(env, tab, rowNumber, patch) {
-  const headers = await headersFor(env, tab);
-  const range = `${encodeURIComponent(tab)}!A${rowNumber}`;
-  const current = await api(
-    env,
-    `/values/${range}:${columnLetter(headers.length)}${rowNumber}`
-  );
-  const row = current.values?.[0] || [];
+// Read-modify-write of one row, found by a key rather than by a remembered
+// row number. A cached row number can be stale — a row inserted, deleted or
+// sorted in the meantime would send the write to the wrong session — so the
+// position is looked up fresh, uncached, at the moment of writing.
+//
+// Only for tabs a single karyakar edits at a time, never for attendance.
+export async function updateRowWhere(env, tab, keyColumn, keyValue, patch) {
+  const data = await api(env, `/values/${encodeURIComponent(tab)}`);
+  const rows = data.values || [];
+  const headers = rows[0] || [];
+  const keyIndex = headers.indexOf(keyColumn);
+  if (keyIndex < 0) throw new Error(`${tab} has no ${keyColumn} column`);
+
+  const index = rows.findIndex((row, i) => i > 0 && row[keyIndex] === keyValue);
+  if (index < 1) throw new Error(`No ${tab} row where ${keyColumn} is ${keyValue}`);
+
+  const rowNumber = index + 1;
+  const row = rows[index].slice();
   headers.forEach((name, i) => {
     if (name in patch) row[i] = patch[name];
     else if (row[i] === undefined) row[i] = '';
   });
-  await api(
-    env,
-    `/values/${range}:${columnLetter(headers.length)}${rowNumber}?valueInputOption=RAW`,
-    { method: 'PUT', body: JSON.stringify({ values: [row] }) }
-  );
+
+  const range = `${encodeURIComponent(tab)}!A${rowNumber}:${columnLetter(headers.length)}${rowNumber}`;
+  await api(env, `/values/${range}?valueInputOption=RAW`, {
+    method: 'PUT',
+    body: JSON.stringify({ values: [row] }),
+  });
   invalidate(tab);
 }
 

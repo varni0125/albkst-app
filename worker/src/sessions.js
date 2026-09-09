@@ -5,13 +5,42 @@
 // what makes twenty-five simultaneous check-ins safe, and what makes an
 // automatic absent mark reversible without losing the history.
 
-import { readTab, appendRows, updateRow } from './sheets.js';
+import { readTab, appendRows, updateRowWhere } from './sheets.js';
 import { codeIsValid } from './checkin-code.js';
 
 const CENTER_ORDER = ['Birmingham', 'Dothan', 'Huntsville', 'Mobile', 'Montgomery'];
 const isTrue = (value) => String(value).trim().toLowerCase() === 'true';
 
 export const WINDOW_STATES = ['closed', 'open', 'closed_manually'];
+const ABSENCE_OUTCOMES = ['approved', 'denied', 'no_request'];
+
+// What a karyakar is allowed to record. The browser asks for a reason before
+// it will submit a denial, but the browser is not where this is decided:
+// section 6 requires a denial to state a reason because the delegate is shown
+// it, and a rule that only exists in the page is not a rule.
+export async function attendanceProblem(env, entry) {
+  if (!entry || !entry.bkId) return 'A delegate is needed.';
+  if (!['present', 'absent'].includes(entry.status)) {
+    return 'A status of present or absent is needed.';
+  }
+
+  const delegates = await readTab(env, 'delegates');
+  const person = delegates.find(
+    (row) => row.bk_id === String(entry.bkId) && isTrue(row.active)
+  );
+  if (!person) return 'That is not an active delegate.';
+
+  if (entry.status === 'absent') {
+    const outcome = entry.absenceOutcome || 'no_request';
+    if (!ABSENCE_OUTCOMES.includes(outcome)) {
+      return 'An absence is approved, denied, or no_request.';
+    }
+    if (outcome === 'denied' && !String(entry.decisionNote || '').trim()) {
+      return 'A denied absence has to state a reason. The delegate is shown it.';
+    }
+  }
+  return null;
+}
 
 function publicSession(row) {
   return {
@@ -97,8 +126,14 @@ export async function rosterFor(env, sessionId) {
       };
     });
 
+  // A centre not in the known order goes last rather than first, which is
+  // what indexOf returning -1 would otherwise do.
+  const rank = (center) => {
+    const i = CENTER_ORDER.indexOf(center);
+    return i < 0 ? CENTER_ORDER.length : i;
+  };
   const centers = [...new Set(people.map((p) => p.center))].sort(
-    (a, b) => CENTER_ORDER.indexOf(a) - CENTER_ORDER.indexOf(b)
+    (a, b) => rank(a) - rank(b) || String(a).localeCompare(String(b))
   );
 
   return {
@@ -120,7 +155,9 @@ export async function rosterFor(env, sessionId) {
 }
 
 export async function setWindow(env, session, state) {
-  await updateRow(env, 'sessions', session._row, { checkin_state: state });
+  await updateRowWhere(env, 'sessions', 'session_id', session.session_id, {
+    checkin_state: state,
+  });
   return { ...publicSession(session), checkinState: state, checkinOpen: state === 'open' };
 }
 

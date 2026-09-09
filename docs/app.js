@@ -1140,7 +1140,9 @@ document.getElementById('setpin-cancel').addEventListener('click', () => {
   show('login');
 });
 
-document.getElementById('signout').addEventListener('click', () => signOut());
+document.getElementById('signout').addEventListener('click', () =>
+  signOut('Signed out. Jai Swaminarayan.')
+);
 
 document.getElementById('session-back').addEventListener('click', () => {
   openSessionId = null;

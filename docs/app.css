@@ -13,6 +13,14 @@ html {
   touch-action: manipulation;
 }
 
+/* The hidden attribute must win. Any rule that sets display - and both the
+   account bar and the tab bar do - otherwise beats the browser's own
+   [hidden] { display: none } on specificity, and hiding an element quietly
+   does nothing. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-height: 100vh;

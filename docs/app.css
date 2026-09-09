@@ -614,13 +614,18 @@ footer {
 }
 
 /* A filled pill behind the tab you are on, rather than a colour change alone.
-   Reads at a glance without needing a shadow. */
+   Reads at a glance without needing a shadow.
+
+   The dark ink belongs to the icon inside the pill and to nothing else: put it
+   on the button and the label underneath goes dark on a dark ground and
+   disappears. */
 .tabs button[aria-current='page'] {
-  color: var(--color-action-text);
+  color: var(--color-text);
 }
 
 .tabs button[aria-current='page'] .tab-pill {
   background: var(--color-action);
+  color: var(--color-action-text);
 }
 
 .tab-pill {

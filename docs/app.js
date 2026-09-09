@@ -24,6 +24,7 @@ let openSessionId = null;
 let openPerson = null; // bkId whose actions are showing
 let pollTimer = null;
 let qrTimer = null;
+let qrBlob = null;
 
 // A scanned code arrives in the URL. It is kept for this tab only, and the
 // address bar is cleaned so the code is not left lying around in a share or a
@@ -366,7 +367,7 @@ async function mark(person, entry) {
 
 /* ---------- the check-in code, drawn as a QR ---------- */
 
-function qrDataUrl(text, scale = 8, quiet = 4) {
+function qrCanvas(text, scale = 10, quiet = 4) {
   const matrix = qrMatrix(text);
   const size = matrix.length;
   const pixels = (size + quiet * 2) * scale;
@@ -385,12 +386,45 @@ function qrDataUrl(text, scale = 8, quiet = 4) {
       }
     }
   }
-  return canvas.toDataURL('image/png');
+  return canvas;
+}
+
+// Saving on a phone.
+//
+// Safari ignores the download attribute on a link, so the obvious approach
+// does nothing at all on an iPhone. The share sheet is the path that works
+// there, and it offers both Save Image and Save to Files. Everything else
+// falls back to a download.
+async function saveCode() {
+  if (!qrBlob) return;
+  const file = new File([qrBlob], `bkst-checkin-${openSessionId}.png`, {
+    type: 'image/png',
+  });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'BKST check-in code' });
+      return;
+    } catch (error) {
+      // Dismissing the share sheet is not a failure worth reporting.
+      if (error && error.name === 'AbortError') return;
+    }
+  }
+
+  const url = URL.createObjectURL(qrBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 function clearQr() {
   if (qrTimer) clearInterval(qrTimer);
   qrTimer = null;
+  qrBlob = null;
   document.getElementById('qr-holder').hidden = true;
 }
 
@@ -402,12 +436,11 @@ async function generateCode() {
   if (!ok) return say(body.error || 'Could not make a code.');
 
   const url = `${location.origin}${location.pathname}?s=${encodeURIComponent(openSessionId)}&c=${encodeURIComponent(body.code)}`;
-  const image = qrDataUrl(url);
-  document.getElementById('qr-image').src = image;
-
-  const save = document.getElementById('qr-save');
-  save.href = image;
-  save.download = `bkst-checkin-${openSessionId}.png`;
+  const canvas = qrCanvas(url);
+  document.getElementById('qr-image').src = canvas.toDataURL('image/png');
+  canvas.toBlob((blob) => {
+    qrBlob = blob;
+  }, 'image/png');
 
   document.getElementById('qr-holder').hidden = false;
 
@@ -711,6 +744,7 @@ document.getElementById('session-back').addEventListener('click', () => {
 });
 
 document.getElementById('qr-generate').addEventListener('click', generateCode);
+document.getElementById('qr-save').addEventListener('click', saveCode);
 
 // Show and hide a PIN. Mistyping one you cannot see is the likeliest way to
 // get locked out, and the lockout is fifteen minutes.

@@ -543,5 +543,7 @@ footer {
 
 #qr-save {
   display: inline-block;
-  margin-top: 6px;
+  width: auto;
+  margin-top: 8px;
+  cursor: pointer;
 }

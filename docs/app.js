@@ -38,6 +38,8 @@ let lastRoster = null;
 let lastDirectory = null;
 let lastStanding = null;
 let currentTab = null;
+let previousStatus = new Map(); // bkId -> status, so only real changes animate
+let shownTally = null;          // the number currently on screen, for counting up
 
 // Tabler icons, inlined. No icon library, no emoji.
 const svg = (paths) =>
@@ -84,6 +86,20 @@ function say(text, tone = 'problem') {
 }
 
 const clearMessage = () => say('');
+
+// A placeholder while a screen loads. Nothing to read, but the shape of the
+// page arrives immediately instead of a blank panel.
+function skeleton(container, { tall = false, lines = 6 } = {}) {
+  container.textContent = '';
+  const holder = document.createElement('div');
+  holder.className = 'skeleton';
+  for (let i = 0; i < lines; i++) {
+    const line = document.createElement('div');
+    line.className = `skeleton-line${tall && i === 0 ? ' tall' : ''}${i % 3 === 2 ? ' short' : ''}`;
+    holder.append(line);
+  }
+  container.append(holder);
+}
 
 function escape(text) {
   return String(text ?? '').replace(/[&<>"']/g, (c) =>
@@ -226,6 +242,7 @@ function setBadge(key, count) {
 
 async function showSessions() {
   show('sessions');
+  skeleton(document.getElementById('session-list'), { tall: true, lines: 3 });
   const { ok, body } = await call('/sessions');
   if (!ok) return say(body.error || 'Could not load the sessions.');
 
@@ -251,8 +268,11 @@ async function showSessions() {
 async function openSession(sessionId) {
   openSessionId = sessionId;
   openPerson = null;
+  previousStatus = new Map();
+  shownTally = null;
   clearMessage();
   show('session');
+  skeleton(document.getElementById('roster'), { lines: 8 });
   await refreshSession();
   startPolling(refreshSession);
 }
@@ -288,10 +308,32 @@ function renderSession(session, roster) {
   panel.hidden = !open;
   if (!open) clearQr();
 
-  document.getElementById('session-tally').textContent =
-    `${roster.present} of ${roster.total} checked in`;
+  countTo(document.getElementById('session-tally'), roster.present, roster.total);
 
   renderRoster(roster);
+}
+
+// Counts up to the new number. Twenty-five people checking in over a couple
+// of minutes reads as movement rather than as a figure that silently differs
+// every time you look at it.
+function countTo(element, value, total) {
+  const write = (n) => {
+    element.textContent = `${n} of ${total} checked in`;
+  };
+  const from = shownTally;
+  shownTally = value;
+  if (from === null || from === value || Math.abs(value - from) > 8 ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return write(value);
+  }
+  let current = from;
+  const step = value > from ? 1 : -1;
+  const tick = () => {
+    current += step;
+    write(current);
+    if (current !== value) setTimeout(tick, 90);
+  };
+  tick();
 }
 
 function renderRoster(roster) {
@@ -326,10 +368,12 @@ function personRow(person) {
   row.type = 'button';
   const used = person.absencesUsed ? ` &middot; ${person.absencesUsed} of 1 absence used` : '';
   const grade = person.grade ? `${escape(person.grade)}th` : '';
+  const changed = previousStatus.has(person.bkId) && previousStatus.get(person.bkId) !== status;
+  previousStatus.set(person.bkId, status);
   row.innerHTML =
     `<span class="person-name">${escape(person.name)}</span>` +
     `<span class="person-meta">${grade}${used}</span>` +
-    `<span class="chip" data-status="${status}">${label}</span>`;
+    `<span class="chip${changed ? ' just-changed' : ''}" data-status="${status}">${label}</span>`;
   row.addEventListener('click', () => {
     openPerson = openPerson === person.bkId ? null : person.bkId;
     // Redrawn from what is already loaded, so a tap does not wait on a read.
@@ -408,16 +452,63 @@ function askReason(panel, person, outcome) {
   box.focus();
 }
 
+// The row changes the instant it is tapped, and the Worker's answer replaces
+// it when it lands. If the Worker refuses, the old state comes back and the
+// refusal is shown, so an optimistic screen never quietly disagrees with what
+// was actually recorded.
 async function mark(person, entry) {
   clearMessage();
+  const rollback = lastRoster;
+  openPerson = null;
+  if (lastRoster) renderSession(lastSession, guessRoster(lastRoster, person, entry));
+
   const { ok, body } = await call(`/sessions/${openSessionId}/attendance`, {
     method: 'POST',
     body: JSON.stringify({ bkId: person.bkId, ...entry }),
   });
-  if (!ok) return say(body.error || 'That mark did not save.');
-  openPerson = null;
+
+  if (!ok) {
+    if (rollback) renderSession(lastSession, rollback);
+    return say(body.error || 'That mark did not save.');
+  }
   say(`${person.name} marked.`, 'good');
   renderSession(lastSession, body.roster);
+}
+
+// What the roster will look like once the Worker agrees. Counts are adjusted
+// so the tally and the per-centre numbers move with the row.
+function guessRoster(roster, person, entry) {
+  const wasAbsent = person.status === 'absent';
+  const nowAbsent = entry.status === 'absent';
+  const delta = (nowAbsent ? 1 : 0) - (wasAbsent ? 1 : 0);
+
+  const groups = roster.groups.map((group) => {
+    const members = group.members.map((member) =>
+      member.bkId === person.bkId
+        ? {
+            ...member,
+            status: entry.status,
+            absenceOutcome: nowAbsent ? entry.absenceOutcome || 'no_request' : '',
+            reason: entry.reason || '',
+            decisionNote: entry.decisionNote || '',
+            absencesUsed: Math.max(0, member.absencesUsed + delta),
+          }
+        : member
+    );
+    return {
+      ...group,
+      members,
+      present: members.filter((m) => m.status === 'present').length,
+    };
+  });
+
+  const everyone = groups.flatMap((g) => g.members);
+  return {
+    ...roster,
+    groups,
+    present: everyone.filter((p) => p.status === 'present').length,
+    absent: everyone.filter((p) => p.status === 'absent').length,
+  };
 }
 
 async function setWindow(state) {
@@ -520,6 +611,7 @@ async function generateCode() {
 
 async function showDirectory() {
   show('delegates');
+  if (!lastDirectory) skeleton(document.getElementById('delegate-list'), { lines: 8 });
   const { ok, body } = await call('/delegates');
   if (!ok) return say(body.error || 'Could not load the delegates.');
   lastDirectory = body;
@@ -617,6 +709,7 @@ async function openDelegate(bkId) {
 
 async function showScores() {
   show('scores');
+  skeleton(document.getElementById('score-list'), { lines: 3 });
   const { ok, body } = await call('/sessions');
   if (!ok) return say(body.error || 'Could not load the sessions.');
 
@@ -644,6 +737,7 @@ async function showScores() {
 
 async function showDashboard() {
   show('dashboard');
+  skeleton(document.getElementById('dashboard-body'), { lines: 4 });
   const { ok, body } = await call('/dashboard');
   if (!ok) return say(body.error || 'Could not load the dashboard.');
   renderDashboard(body);
@@ -737,6 +831,7 @@ async function decide(request, decision, note) {
 
 async function showStanding() {
   show('delegate');
+  if (!lastStanding) skeleton(document.getElementById('session-lines'), { lines: 4 });
   await refreshStanding();
   startPolling(refreshStanding);
 }

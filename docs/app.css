@@ -788,3 +788,82 @@ body.has-tabs {
   text-align: left;
   cursor: pointer;
 }
+
+
+/* Motion.
+   Restrained on purpose: this app tells people whether they are still in the
+   programme, so it acknowledges a change rather than celebrating it. All of
+   it is switched off for anyone who asks for less movement. */
+
+.chip,
+.slot,
+.person-row,
+.session-card {
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+@keyframes settle {
+  0% { transform: translateY(-2px); opacity: 0.4; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.chip.just-changed {
+  animation: settle 260ms ease-out;
+}
+
+@keyframes lift {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.message:not([hidden]) {
+  animation: lift 200ms ease-out;
+}
+
+.person-actions {
+  animation: lift 160ms ease-out;
+}
+
+button {
+  transition: background-color 140ms ease, opacity 140ms ease;
+}
+
+button:active:not(:disabled) {
+  opacity: 0.8;
+}
+
+/* Loading. A pulse rather than a sweep: a shimmer is a gradient, and the
+   spec asks for none. */
+@keyframes breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.skeleton {
+  animation: breathe 1.4s ease-in-out infinite;
+}
+
+.skeleton-line {
+  height: 14px;
+  margin: 14px 0;
+  border-radius: 4px;
+  background: var(--color-muted-surface);
+}
+
+.skeleton-line.short {
+  width: 45%;
+}
+
+.skeleton-line.tall {
+  height: 56px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

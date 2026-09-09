@@ -25,6 +25,8 @@ let openPerson = null; // bkId whose actions are showing
 let pollTimer = null;
 let qrTimer = null;
 let qrBlob = null;
+let lastSession = null; // what is on screen, so a tap can redraw without a fetch
+let lastRoster = null;
 
 // A scanned code arrives in the URL. It is kept for this tab only, and the
 // address bar is cleaned so the code is not left lying around in a share or a
@@ -64,10 +66,21 @@ function show(name) {
   if (name !== 'session' && name !== 'delegate') stopPolling();
 }
 
+let messageTimer = null;
+
+// Shown as a toast pinned to the top of the viewport. It used to sit in the
+// page flow, which meant a confirmation could appear above a roster someone
+// had scrolled well past, and never be seen.
 function say(text, tone = 'problem') {
+  if (messageTimer) clearTimeout(messageTimer);
   message.textContent = text;
   message.dataset.tone = tone;
   message.hidden = !text;
+  if (!text) return;
+  // Problems stay longer, since they usually need reading twice.
+  messageTimer = setTimeout(() => {
+    message.hidden = true;
+  }, tone === 'problem' ? 8000 : 4000);
 }
 
 const clearMessage = () => say('');
@@ -191,6 +204,8 @@ async function refreshSession() {
 }
 
 function renderSession(session, roster) {
+  lastSession = session;
+  lastRoster = roster;
   document.getElementById('session-title').textContent = dateRange(
     session.startDate,
     session.endDate
@@ -268,7 +283,10 @@ function personRow(person) {
     `<span class="chip" data-status="${status}">${label}</span>`;
   row.addEventListener('click', () => {
     openPerson = openPerson === person.bkId ? null : person.bkId;
-    refreshSession();
+    // Redrawn from what is already loaded. Going back to the Worker just to
+    // open a panel made every tap wait on a Sheets read.
+    if (lastSession && lastRoster) renderSession(lastSession, lastRoster);
+    else refreshSession();
   });
   wrap.append(row);
 
@@ -362,8 +380,8 @@ async function mark(person, entry) {
   });
   if (!ok) return say(body.error || 'That mark did not save.');
   openPerson = null;
-  const session = await call('/sessions/' + openSessionId);
-  if (session.ok) renderSession(session.body.session, session.body.roster);
+  say(`${person.name} marked.`, 'good');
+  renderSession(lastSession, body.roster);
 }
 
 /* ---------- the check-in code, drawn as a QR ---------- */
@@ -641,8 +659,10 @@ async function checkIn(sessionId, code) {
 
 function landOn(signedInAccount) {
   account = signedInAccount;
-  document.getElementById('account-name').textContent =
-    `${account.name} - ${account.role === 'karyakar' ? 'Karyakar' : 'Delegate'}`;
+  document.getElementById('greeting').textContent =
+    `Jai Swaminarayan, ${account.firstName}`;
+  document.getElementById('account-role').textContent =
+    account.role === 'karyakar' ? 'Karyakar' : 'Delegate';
   accountBar.hidden = false;
   clearMessage();
   if (account.role === 'karyakar') showSessions();

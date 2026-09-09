@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>BKST</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -10,24 +10,28 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
     />
-    <link rel="stylesheet" href="tokens.css?v=6" />
-    <link rel="stylesheet" href="app.css?v=6" />
+    <link rel="stylesheet" href="tokens.css?v=7" />
+    <link rel="stylesheet" href="app.css?v=7" />
   </head>
   <body>
     <main>
       <img class="logo" src="assets/kst-logo.png" alt="Kishore Sevak Training" />
 
       <div class="account-bar" id="account-bar" hidden>
-        <span id="account-name"></span>
+        <div>
+          <p class="greeting" id="greeting"></p>
+          <p class="account-role" id="account-role"></p>
+        </div>
         <button class="linkish" type="button" id="signout">Sign out</button>
       </div>
 
-      <p class="message" id="message" data-tone="problem" hidden></p>
+      <p class="message" id="message" data-tone="problem" role="status"
+        aria-live="polite" hidden></p>
 
       <!-- Sign in -->
       <section id="view-login">
-        <h1>Sign in</h1>
-        <p class="lede">Use your BK ID and PIN.</p>
+        <h1>Jai Swaminarayan</h1>
+        <p class="lede">Welcome to AL BKST. Sign in with your BK ID and PIN.</p>
         <form id="form-login">
           <div class="field">
             <label for="login-id">BK ID</label>
@@ -140,7 +144,7 @@
       <footer>Bal-Kishore Sevak Training &middot; Alabama</footer>
     </main>
 
-    <script src="qr.js?v=6"></script>
-    <script src="app.js?v=6"></script>
+    <script src="qr.js?v=7"></script>
+    <script src="app.js?v=7"></script>
   </body>
 </html>

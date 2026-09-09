@@ -6,11 +6,14 @@ The full specification is `docs/spec.md`. Read it before proposing work.
 
 ## Current phase
 
-**Phase 1 only** — auth, roster, attendance (with the check-in window), and
-manual score entry. Nothing else gets built yet.
+**Phase 1**, of which only **manual score entry** is left. Built and tested on
+real devices: auth for both roles, the roster, the check-in window, the QR
+check-in gate, self check-in, manual marking and corrections, absence
+requests, the delegate directory, and the needs-attention dashboard.
 
 Quizzes, the grading queue, homework upload, and practice mode are Phases 2–4.
-Do not build them, scaffold them, or add "for later" hooks for them.
+Do not build them, scaffold them, or add "for later" hooks for them, until I
+say the phase has changed.
 
 Build the karyakar side first and well — it is the real product.
 
@@ -31,6 +34,27 @@ Build the karyakar side first and well — it is the real product.
   Role is checked server-side on every request, not just at login. A delegate
   changing a URL must not reach karyakar data. The frontend renders what the
   Worker returns; it never decides who may see it and never computes a grade.
+- **A rule enforced only in the page is not a rule.** Anything the browser
+  refuses, the Worker must refuse too. A denied absence needs its reason
+  checked in both places, not just the one you can see.
+
+## Things that have already bitten
+
+- **Google allows 60 Sheets reads a minute.** Tab reads are cached in the
+  Worker for this reason. Twenty-five delegates checking in at once went past
+  the limit and the app started failing, at the worst possible moment.
+- **That cache lives in one isolate**, and a write only clears the isolate
+  that made it. Anything deciding on current state — approving a request,
+  marking attendance — must read past the cache, or the same decision can be
+  applied twice.
+- **Attendance is append-only and reconciled by `marked_at`**, never by row
+  order. The sheet is something karyakars will sort.
+- **Dates in the sheet must stay `yyyy-mm-dd`.** They are compared as strings.
+- **Reading the code is not testing it.** Three bugs this project shipped past
+  review were invisible on the page but obvious on a phone: the wrong session
+  card, a save button Safari ignores, and a `hidden` attribute beaten by a CSS
+  `display` rule. Anything visual needs a real device before it counts as
+  working.
 
 ## Styling
 
@@ -42,6 +66,8 @@ Build the karyakar side first and well — it is the real product.
 - One action-colored element per screen. Generous whitespace, hairline borders,
   no gradients, no shadows.
 - Every warning names its remedy, or isn't shown at all.
+- Keep `[hidden] { display: none !important }` in `app.css`. Any class that
+  sets `display` beats the browser's own rule, and hiding then silently fails.
 
 ## Secrets
 

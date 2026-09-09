@@ -160,6 +160,17 @@ duplicate rows are the audit trail.
 
 Every other tab is one row per key.
 
+### absence_requests
+| field | notes |
+|---|---|
+| request_id | primary key |
+| session_id, bk_id | |
+| reason | the delegate's own words |
+| requested_at | |
+| state | pending / approved / denied / cancelled |
+| decided_by, decided_at | |
+| decision_note | the karyakar's words; required to deny |
+
 ### questions
 | field | notes |
 |---|---|
@@ -300,7 +311,21 @@ that it isn't meaningful data.
 ### Absence requests
 
 Delegates submit an absence ahead of a session with a stated reason. A karyakar
-approves or denies it.
+approves or denies it, from the Attention tab.
+
+**Requests close when a session begins.** Someone taken ill that morning
+phones a karyakar, who can excuse them after the fact. A delegate can cancel
+their own request while it is still pending; once decided it is a karyakar's
+to change.
+
+**Approving records the excused absence immediately.** Denying records
+nothing: section 6 says a delegate who is denied and turns up anyway gets a
+normal grade, so a denial must not pre-mark anyone absent. If they then fail
+to appear, closing the check-in window records it as denied — carrying the
+karyakar's reason — rather than as a plain no-show.
+
+Requests live in their own tab, not in `attendance`. A pending request is not
+an absence and must not be counted as one.
 
 | outcome | grade effect | counts toward dismissal |
 |---|---|---|
@@ -354,33 +379,48 @@ session's pool alongside the quiz.
 
 ## 8. Screens
 
-### Delegate
-1. **Login** — BK ID + PIN; first-login PIN set
-2. **Home / standing**
-   - Standing headline: in good standing, or not
-   - Six session slots as a bar row — whole year visible at once
-   - Next session date, with check-in button when the window is open
-   - Homework card, only when the session has homework
-   - Session grades list, per session, 80% marked
-   - Practice button (v2)
-3. **Quiz** — one question at a time, autosaved
-4. **Homework upload**
-5. **Request absence**
+One login screen serves both roles. What you see afterwards is decided by the
+Worker, not by the address you type.
 
-### Karyakar
-1. **Login** — separate credentials
-2. **Session view**
-   - Open/close check-in, live count
-   - Roster with manual mark
-   - Open/close quiz
-3. **Grading queue** — by question, key pinned, tap-to-score
-4. **Homework queue** — submitted count, tap through to Drive, enter points
-5. **Dashboard / needs attention**
-   - Below 80% on any session
-   - Absence used
-   - Missing homework
+### Delegate — one screen, no tabs
+
+Nothing on it is crowded, so splitting it would mean tapping to reach things
+currently visible at a glance. Revisit when grades give it real content.
+
+1. **Login** — BK ID + PIN; first-login PIN set
+2. **Your year**
+   - Absence allowance, "0 of 1", turning gold once spent
+   - Next session card: dates, location, a countdown, and the check-in button
+     when the window is open and a code has been scanned
+   - Request an absence, or cancel one still pending
+   - Six session slots as a bar row — three scheduled, three marked spring
+   - Session list; a denial shows the karyakar's reason here, not behind a tap
+3. **Session detail** — one session: what you are marked, the reason if any,
+   and the request flow for that session
+4. **Quiz** (phase 2), **Homework upload** (phase 3)
+
+Grades are deliberately absent until scores exist. A standing headline on the
+basis of nothing is worse than no headline.
+
+### Karyakar — four tabs
+
+1. **Sessions** — the three cards, then one session:
+   - Open/close check-in, live count, roster grouped by centre
+   - Generate the check-in code, shown as a QR with a countdown, savable
+   - Tap a name to mark present, excused, or absent
+   - Open/close quiz (phase 2)
+2. **Delegates** — searchable directory; tapping someone gives their history
+   across every session, their absence count, and PIN reset. Reaching a person
+   should not require opening a session
+3. **Scores** — manual entry, and later the grading queue (phase 2) and the
+   homework queue (phase 3)
+4. **Attention** — needs-attention dashboard, badged with what is waiting
+   - Absence requests to decide
+   - Absence used, red at the second one because that ends participation
+   - Below 80% and missing homework arrive with grades; the section is absent
+     rather than empty, because an empty section promises something the app
+     cannot yet do
    - Red for real consequences, gold for worth-a-word
-6. **Delegate detail** — full history plus notes field (post-pilot)
 
 ---
 

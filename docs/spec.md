@@ -211,6 +211,10 @@ a graded quiz.
   There is no weighting to configure — a karyakar creates a homework assignment
   worth N points and the math absorbs it automatically.
 - **80% threshold** applies to the session grade, whatever it's composed of.
+- **A session with no quiz and no homework carries no grade.** Session one is
+  like this. It counts for attendance and for the absence limit, but there are
+  no points in its pool, so it is left out of the year's denominator entirely
+  — the same treatment an approved absence gets.
 - **An approved absence does not count toward the grade.** The session is
   excluded from the denominator entirely — a delegate with one approved absence
   is graded on five sessions, not six. A denied or unrequested absence records a
@@ -268,8 +272,27 @@ attendance, grading, and the absence counter, however many days it runs.
 4. **Manual close** available in case a karyakar forgets
 5. **Manual mark** for anyone arriving after the window shuts
 
-No QR codes — a code with no time limit can be screenshotted and forwarded, and
-QR's advantage (speed at a queue) doesn't apply to 25 people six times a year.
+### The check-in code
+
+A delegate cannot check themselves in unless they have scanned the code shown
+on a karyakar's screen. The open window alone is not enough — without this,
+anyone could check in from home while it is open.
+
+The code carries its own expiry, signed, and lasts thirty minutes. A karyakar
+generates one, the screen draws it as a QR with a countdown, and it can be
+saved as an image to print or project. Delegates scan it with their ordinary
+camera app, which opens the app with the code in the URL; there is no scanner
+built into the app, because iOS has no browser support for one.
+
+This reverses the original decision to use no QR codes, which reasoned that "a
+code with no time limit can be screenshotted and forwarded". This code has a
+time limit. What it stops is checking in from elsewhere without ever having
+seen the code. What it does not stop is someone deliberately relaying a live
+code to a friend at home within the half hour, and a check-in window is
+normally open for far less than that.
+
+A delegate who cannot scan is marked by a karyakar. There is no typed
+fallback: a code that can be read aloud can be read down a phone.
 
 No punctuality tracking. It was a byproduct of timestamped scanning; without
 that it isn't meaningful data.

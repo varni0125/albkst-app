@@ -30,6 +30,11 @@
   /* Quiet surface — disabled controls, states with no consequence */
   --color-muted-surface: #F0E7D2;
 
+  /* The check-in QR. Deliberately outside the palette: scanners want maximum
+     contrast, and a cream-on-navy code fails in poor light. */
+  --color-qr-dark: #000000;
+  --color-qr-light: #FFFFFF;
+
   /* Typography — serif for headlines, names, questions;
      sans for UI chrome and answers */
   --font-serif: "Source Serif 4", Georgia, "Iowan Old Style", serif;

@@ -6,6 +6,7 @@
 // automatic absent mark reversible without losing the history.
 
 import { readTab, appendRows, updateRow } from './sheets.js';
+import { codeIsValid } from './checkin-code.js';
 
 const CENTER_ORDER = ['Birmingham', 'Dothan', 'Huntsville', 'Mobile', 'Montgomery'];
 const isTrue = (value) => String(value).trim().toLowerCase() === 'true';
@@ -156,12 +157,20 @@ function hasEnded(session) {
 
 // A delegate checking themselves in. Refused unless the window is open and the
 // session has not already happened — both checked here, not in the browser.
-export async function selfCheckin(env, session, bkId) {
+export async function selfCheckin(env, session, bkId, code) {
   if (hasEnded(session)) {
     return { ok: false, error: 'That session is over.' };
   }
   if (session.checkin_state !== 'open') {
     return { ok: false, error: 'Check-in is not open for this session.' };
+  }
+  // Proof of being in the room. Without it a delegate could check in from
+  // home while the window is open.
+  if (!(await codeIsValid(env, session.session_id, code))) {
+    return {
+      ok: false,
+      error: 'That code has expired. Scan the code on the karyakar screen again.',
+    };
   }
   const latest = await reconcile(env);
   const existing = latest.get(`${session.session_id}|${bkId}`);

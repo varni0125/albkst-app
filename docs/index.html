@@ -10,8 +10,8 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
     />
-    <link rel="stylesheet" href="tokens.css?v=3" />
-    <link rel="stylesheet" href="app.css?v=3" />
+    <link rel="stylesheet" href="tokens.css?v=4" />
+    <link rel="stylesheet" href="app.css?v=4" />
   </head>
   <body>
     <main>
@@ -100,6 +100,21 @@
           <p class="hint" id="window-hint"></p>
         </div>
 
+        <div class="qr-panel" id="qr-panel" hidden>
+          <button class="quiet" type="button" id="qr-generate">
+            Generate check-in code
+          </button>
+          <div id="qr-holder" hidden>
+            <img id="qr-image" alt="Check-in code" />
+            <p class="qr-countdown" id="qr-countdown"></p>
+            <a class="linkish" id="qr-save" download>Save image</a>
+            <p class="hint">
+              Delegates scan this with their own camera app. On a phone, press
+              and hold the code to save it.
+            </p>
+          </div>
+        </div>
+
         <p class="tally" id="session-tally"></p>
         <div id="roster"></div>
       </section>
@@ -114,6 +129,9 @@
           <p class="next-where" id="next-where"></p>
           <button type="button" id="checkin">Check in</button>
           <p class="hint" id="next-hint"></p>
+          <p class="hint" id="next-scan" hidden>
+            Scan the check-in code on a karyakar's screen with your camera.
+          </p>
         </div>
 
         <div class="slots" id="slots"></div>
@@ -123,6 +141,7 @@
       <footer>Bal-Kishore Sevak Training &middot; Alabama</footer>
     </main>
 
-    <script src="app.js?v=3"></script>
+    <script src="qr.js?v=4"></script>
+    <script src="app.js?v=4"></script>
   </body>
 </html>

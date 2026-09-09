@@ -17,6 +17,7 @@ import {
   markAttendance,
   standingFor,
 } from './sessions.js';
+import { issueCode } from './checkin-code.js';
 
 export { Account };
 
@@ -200,11 +201,23 @@ export default {
           return json(env, { roster: await rosterFor(env, session.session_id) });
         }
 
+        // The karyakar taps generate; this hands back a code good for thirty
+        // minutes, which their screen draws as a QR with a countdown.
+        if (method === 'POST' && action === '/checkin-code') {
+          const denied = karyakarOnly();
+          if (denied) return denied;
+          if (session.checkin_state !== 'open') {
+            return fail(env, 409, 'Open check-in first, then generate a code.');
+          }
+          return json(env, await issueCode(env, session.session_id));
+        }
+
         if (method === 'POST' && action === '/checkin') {
           if (account.role !== 'delegate') {
             return fail(env, 403, 'Only delegates check themselves in.');
           }
-          const result = await selfCheckin(env, session, account.id);
+          const { code } = await readJson(request);
+          const result = await selfCheckin(env, session, account.id, code);
           if (!result.ok) return fail(env, 409, result.error);
           return json(env, result);
         }

@@ -23,6 +23,34 @@ let pendingId = ''; // carried from the login screen into first-PIN setup
 let openSessionId = null;
 let openPerson = null; // bkId whose actions are showing
 let pollTimer = null;
+let qrTimer = null;
+
+// A scanned code arrives in the URL. It is kept for this tab only, and the
+// address bar is cleaned so the code is not left lying around in a share or a
+// screenshot of the browser.
+const scanned = (function readScan() {
+  const params = new URLSearchParams(location.search);
+  const sessionId = params.get('s');
+  const code = params.get('c');
+  if (sessionId && code) {
+    try {
+      sessionStorage.setItem('bkst.scan', JSON.stringify({ sessionId, code }));
+    } catch {
+      // Storage can be refused; the value in memory still serves this visit.
+    }
+    history.replaceState(null, '', location.pathname);
+    return { sessionId, code };
+  }
+  try {
+    return JSON.parse(sessionStorage.getItem('bkst.scan') || 'null');
+  } catch {
+    return null;
+  }
+})();
+
+function scanFor(sessionId) {
+  return scanned && scanned.sessionId === sessionId ? scanned.code : null;
+}
 
 // Tabler icons, inlined. No icon library, no emoji.
 const ICON = {
@@ -183,6 +211,10 @@ function renderSession(session, roster) {
     ? 'Closing marks everyone who has not checked in as absent. You can change any of them afterwards.'
     : '';
 
+  const panel = document.getElementById('qr-panel');
+  panel.hidden = !open;
+  if (!open) clearQr();
+
   document.getElementById('session-tally').textContent =
     `${roster.present} of ${roster.total} checked in`;
 
@@ -332,6 +364,70 @@ async function mark(person, entry) {
   if (session.ok) renderSession(session.body.session, session.body.roster);
 }
 
+/* ---------- the check-in code, drawn as a QR ---------- */
+
+function qrDataUrl(text, scale = 8, quiet = 4) {
+  const matrix = qrMatrix(text);
+  const size = matrix.length;
+  const pixels = (size + quiet * 2) * scale;
+  const canvas = document.createElement('canvas');
+  canvas.width = pixels;
+  canvas.height = pixels;
+  const context = canvas.getContext('2d');
+  const styles = getComputedStyle(document.documentElement);
+  context.fillStyle = styles.getPropertyValue('--color-qr-light').trim();
+  context.fillRect(0, 0, pixels, pixels);
+  context.fillStyle = styles.getPropertyValue('--color-qr-dark').trim();
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (matrix[r][c]) {
+        context.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
+      }
+    }
+  }
+  return canvas.toDataURL('image/png');
+}
+
+function clearQr() {
+  if (qrTimer) clearInterval(qrTimer);
+  qrTimer = null;
+  document.getElementById('qr-holder').hidden = true;
+}
+
+async function generateCode() {
+  clearMessage();
+  const { ok, body } = await call(`/sessions/${openSessionId}/checkin-code`, {
+    method: 'POST',
+  });
+  if (!ok) return say(body.error || 'Could not make a code.');
+
+  const url = `${location.origin}${location.pathname}?s=${encodeURIComponent(openSessionId)}&c=${encodeURIComponent(body.code)}`;
+  const image = qrDataUrl(url);
+  document.getElementById('qr-image').src = image;
+
+  const save = document.getElementById('qr-save');
+  save.href = image;
+  save.download = `bkst-checkin-${openSessionId}.png`;
+
+  document.getElementById('qr-holder').hidden = false;
+
+  const expiresAt = Date.now() + body.secondsLeft * 1000;
+  const countdown = document.getElementById('qr-countdown');
+  const tick = () => {
+    const left = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+    const minutes = Math.floor(left / 60);
+    const seconds = String(left % 60).padStart(2, '0');
+    countdown.textContent = left
+      ? `Expires in ${minutes}:${seconds}`
+      : 'Expired. Generate a new code.';
+    countdown.dataset.expired = left ? 'false' : 'true';
+    if (!left) clearQr();
+  };
+  tick();
+  if (qrTimer) clearInterval(qrTimer);
+  qrTimer = setInterval(tick, 1000);
+}
+
 async function setWindow(state) {
   clearMessage();
   const { ok, body } = await call(`/sessions/${openSessionId}/window`, {
@@ -424,9 +520,13 @@ function renderStanding(standing) {
     );
     document.getElementById('next-where').textContent = next.location;
 
+    // Without a scanned code there is nothing to press. Section 9: a warning
+    // names its remedy, so the screen says where the code comes from.
+    const code = scanFor(next.id);
     const button = document.getElementById('checkin');
-    button.hidden = !next.canCheckIn;
-    button.onclick = () => checkIn(next.id);
+    button.hidden = !next.canCheckIn || !code;
+    button.onclick = () => checkIn(next.id, code);
+    document.getElementById('next-scan').hidden = !next.canCheckIn || Boolean(code);
 
     // Section 9: a warning names its remedy, or it is not shown. So a closed
     // window says nothing, but being already marked does.
@@ -485,11 +585,14 @@ function renderSessionLines(sessions) {
   }
 }
 
-async function checkIn(sessionId) {
+async function checkIn(sessionId, code) {
   clearMessage();
   const button = document.getElementById('checkin');
   button.disabled = true;
-  const { ok, body } = await call(`/sessions/${sessionId}/checkin`, { method: 'POST' });
+  const { ok, body } = await call(`/sessions/${sessionId}/checkin`, {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
   button.disabled = false;
   if (!ok) {
     say(body.error || 'That did not save. Try again.');
@@ -602,9 +705,12 @@ document.getElementById('signout').addEventListener('click', () => signOut());
 document.getElementById('session-back').addEventListener('click', () => {
   openSessionId = null;
   openPerson = null;
+  clearQr();
   clearMessage();
   showSessions();
 });
+
+document.getElementById('qr-generate').addEventListener('click', generateCode);
 
 // Show and hide a PIN. Mistyping one you cannot see is the likeliest way to
 // get locked out, and the lockout is fifteen minutes.

@@ -50,6 +50,11 @@ Build the karyakar side first and well — it is the real product.
 - **Attendance is append-only and reconciled by `marked_at`**, never by row
   order. The sheet is something karyakars will sort.
 - **Dates in the sheet must stay `yyyy-mm-dd`.** They are compared as strings.
+- **The service worker fetches the page network-first, on purpose.** Serving
+  a cached page first is how people end up stranded on an old version with no
+  address bar to escape through. Static files are cache-first only because
+  they carry a `?v=` stamp, and the API is never cached at all: an attendance
+  count from ten minutes ago is worse than admitting there is no connection.
 - **Reading the code is not testing it.** Three bugs this project shipped past
   review were invisible on the page but obvious on a phone: the wrong session
   card, a save button Safari ignores, and a `hidden` attribute beaten by a CSS
@@ -88,8 +93,11 @@ deployed yet, the app is broken in production.
 
 1. `wrangler deploy` from `worker/`
 2. Verify the endpoint responds
-3. Bump the `?v=` on the `tokens.css`, `app.css`, and `app.js` tags in
-   `docs/index.html`
+3. Bump the `?v=` on the `tokens.css`, `app.css`, `qr.js`, `app.js` and
+   `manifest.webmanifest` tags in `docs/index.html`, and on the `sw.js`
+   registration in `docs/app.js`. The service worker serves static files
+   cache-first, so a file whose URL does not change is a file that never
+   updates
 4. Then commit and push `docs/`
 
 GitHub Pages serves everything with `cache-control: max-age=600`, so a phone

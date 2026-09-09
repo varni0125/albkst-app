@@ -109,14 +109,29 @@ function escape(text) {
 
 async function call(path, options = {}) {
   const token = readToken();
-  const response = await fetch(API + path, {
-    ...options,
-    headers: {
-      'content-type': 'application/json',
-      ...(token ? { authorization: 'Bearer ' + token } : {}),
-      ...(options.headers || {}),
-    },
-  });
+  let response;
+  try {
+    response = await fetch(API + path, {
+      ...options,
+      headers: {
+        'content-type': 'application/json',
+        ...(token ? { authorization: 'Bearer ' + token } : {}),
+        ...(options.headers || {}),
+      },
+    });
+  } catch {
+    // Nothing was recorded. Say so plainly rather than leaving someone to
+    // wonder whether their check-in landed.
+    return {
+      ok: false,
+      status: 0,
+      body: {
+        error: navigator.onLine
+          ? 'Could not reach the server. Nothing was saved. Try again.'
+          : 'You are offline. Nothing was saved. Try again once you have signal.',
+      },
+    };
+  }
   let body = {};
   try {
     body = await response.json();
@@ -1266,6 +1281,22 @@ for (const button of document.querySelectorAll('.reveal')) {
     button.innerHTML = hidden ? ICON.eyeOff : ICON.eye;
     button.setAttribute('aria-label', hidden ? 'Hide PIN' : 'Show PIN');
     input.focus();
+  });
+}
+
+// Offline support. Registration failing is not worth reporting: the app works
+// perfectly well without it, it simply needs the network.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js?v=13').catch(() => {});
+  });
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // Once only. A reload loop with no address bar to escape it would be the
+    // worst thing this file could do.
+    if (reloading) return;
+    reloading = true;
+    location.reload();
   });
 }
 

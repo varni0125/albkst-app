@@ -229,7 +229,9 @@ function buildTabs(role) {
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.tab = tab.key;
-    button.innerHTML = `${tab.icon}<span>${tab.label}</span><span class="tab-badge" hidden></span>`;
+    button.innerHTML =
+      `<span class="tab-pill">${tab.icon}</span><span>${tab.label}</span>` +
+      '<span class="tab-badge" hidden></span>';
     button.addEventListener('click', () => selectTab(tab.key));
     tabBar.append(button);
   }
@@ -287,6 +289,7 @@ async function openSession(sessionId) {
   shownTally = null;
   clearMessage();
   show('session');
+  document.getElementById('session-tiles').textContent = '';
   skeleton(document.getElementById('roster'), { lines: 8 });
   await refreshSession();
   startPolling(refreshSession);
@@ -323,32 +326,62 @@ function renderSession(session, roster) {
   panel.hidden = !open;
   if (!open) clearQr();
 
-  countTo(document.getElementById('session-tally'), roster.present, roster.total);
+  renderTiles(roster);
 
   renderRoster(roster);
 }
 
-// Counts up to the new number. Twenty-five people checking in over a couple
-// of minutes reads as movement rather than as a figure that silently differs
-// every time you look at it.
-function countTo(element, value, total) {
-  const write = (n) => {
-    element.textContent = `${n} of ${total} checked in`;
-  };
+// Three numbers rather than a sentence. A karyakar reads these from across a
+// room; "12 of 25 checked in" has to be walked up to.
+function renderTiles(roster) {
+  const waiting = roster.total - roster.present - roster.absent;
+  const tiles = [
+    { key: 'present', number: roster.present, label: 'Present', tone: 'good' },
+    { key: 'absent', number: roster.absent, label: 'Absent', tone: 'bad' },
+    { key: 'waiting', number: waiting, label: 'Not in yet', tone: '' },
+  ];
+  const holder = document.getElementById('session-tiles');
+  holder.textContent = '';
+  for (const tile of tiles) {
+    const box = document.createElement('div');
+    box.className = 'tile';
+    if (tile.tone) box.dataset.tone = tile.tone;
+    box.innerHTML =
+      `<span class="tile-number" data-key="${tile.key}">${tile.number}</span>` +
+      `<span class="tile-label">${tile.label}</span>`;
+    holder.append(box);
+  }
+  countTo(holder.querySelector('[data-key="present"]'), roster.present);
+}
+
+// The present count climbs to its new value, so people arriving reads as
+// movement rather than as a figure that silently differs each time you look.
+function countTo(element, value) {
   const from = shownTally;
   shownTally = value;
-  if (from === null || from === value || Math.abs(value - from) > 8 ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    return write(value);
+  if (
+    !element || from === null || from === value || Math.abs(value - from) > 8 ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    return;
   }
   let current = from;
   const step = value > from ? 1 : -1;
+  element.textContent = current;
   const tick = () => {
     current += step;
-    write(current);
+    element.textContent = current;
     if (current !== value) setTimeout(tick, 90);
   };
   tick();
+}
+
+// No photographs, and there never will be any.
+function initialsOf(name) {
+  const parts = String(name || '').trim().split(/\s+/);
+  const first = parts[0]?.[0] || '';
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (first + last).toUpperCase();
 }
 
 // Re-rendering the roster changes what is above a row, so the row you are
@@ -410,6 +443,7 @@ function personRow(person) {
   const changed = previousStatus.has(person.bkId) && previousStatus.get(person.bkId) !== status;
   previousStatus.set(person.bkId, status);
   row.innerHTML =
+    `<span class="initials">${escape(initialsOf(person.name))}</span>` +
     `<span class="person-name">${escape(person.name)}</span>` +
     `<span class="person-meta">${grade}${used}</span>` +
     `<span class="chip${changed ? ' just-changed' : ''}" data-status="${status}">${label}</span>`;
@@ -698,6 +732,7 @@ function renderDirectory(filter = '') {
         ? `<span class="chip" data-status="${person.absencesUsed >= 2 ? 'absent' : 'excused'}">${person.absencesUsed} of 1</span>`
         : '';
       row.innerHTML =
+        `<span class="initials">${escape(initialsOf(person.name))}</span>` +
         `<span class="person-name">${escape(person.name)}</span>` +
         `<span class="person-meta">${person.grade ? escape(person.grade) + 'th' : ''}</span>${used}`;
       row.addEventListener('click', () => openDelegate(person.bkId));
@@ -827,6 +862,7 @@ function renderDashboard(data) {
       row.className = 'person-link';
       row.type = 'button';
       row.innerHTML =
+        `<span class="initials">${escape(initialsOf(person.name))}</span>` +
         `<span class="person-name">${escape(person.name)}</span>` +
         `<span class="chip" data-status="${person.critical ? 'absent' : 'excused'}">${person.absencesUsed} of 1</span>`;
       row.addEventListener('click', () => openDelegate(person.bkId));
@@ -1334,7 +1370,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=14').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=15').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

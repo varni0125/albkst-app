@@ -68,6 +68,12 @@ Build the karyakar side first and well — it is the real product.
 - **No emoji anywhere** — UI, code, comments, or commit messages.
   **Tabler icons only.**
 - Serif for headlines, names, and questions; sans for UI and answers.
+- The palette is dark, and the meanings are unchanged: red is a real
+  consequence, gold is worth-a-word, green is passing. **The action colour is
+  cream, not gold.** Gold already means soft warning, and section 9 forbids the
+  brand colour and the alarm colour being cousins — the reason maroon was
+  rejected. Returning to the cream ground is a `tokens.css` edit and nothing
+  else, which is the whole point of the no-hex rule.
 - One action-colored element per screen. Generous whitespace, hairline borders,
   no gradients, no shadows.
 - Every warning names its remedy, or isn't shown at all.

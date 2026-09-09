@@ -28,7 +28,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 32px 20px 64px;
-  background: var(--color-cream);
+  background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-sans);
   font-size: 16px;
@@ -50,11 +50,12 @@ main {
 }
 
 h1 {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-family: var(--font-serif);
-  font-size: 26px;
+  font-size: 33px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
 }
 
 .lede {
@@ -85,10 +86,11 @@ input {
   font-size: 17px;
 }
 
-input:focus {
-  outline: 2px solid var(--color-navy);
+input:focus,
+textarea:focus {
+  outline: 2px solid var(--color-action);
   outline-offset: -1px;
-  border-color: var(--color-navy);
+  border-color: var(--color-action);
 }
 
 /* Digits only, and wide enough to read back at a glance. */
@@ -109,11 +111,11 @@ button {
   padding: 13px 16px;
   border: none;
   border-radius: 6px;
-  background: var(--color-navy);
-  color: var(--color-cream);
+  background: var(--color-action);
+  color: var(--color-action-text);
   font-family: inherit;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -127,6 +129,7 @@ button:disabled {
    appear above a roster someone had scrolled well past, and go unread. */
 .message {
   position: fixed;
+  background: var(--color-raised);
   top: 12px;
   left: 50%;
   z-index: 20;
@@ -250,10 +253,10 @@ footer {
   display: block;
   width: 100%;
   margin-bottom: 12px;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--color-hairline);
-  border-radius: 8px;
-  background: none;
+  border-radius: 12px;
+  background: var(--color-raised);
   color: inherit;
   font-family: inherit;
   font-size: inherit;
@@ -277,9 +280,10 @@ footer {
 /* Check-in window */
 .window-panel {
   margin: 24px 0 20px;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--color-hairline);
-  border-radius: 8px;
+  border-radius: 12px;
+  background: var(--color-raised);
 }
 
 .window-state {
@@ -444,9 +448,10 @@ footer {
 
 .next-card {
   margin-bottom: 26px;
-  padding: 18px;
+  padding: 20px;
   border: 1px solid var(--color-hairline);
-  border-radius: 8px;
+  border-radius: 12px;
+  background: var(--color-raised);
 }
 
 .next-when {
@@ -549,9 +554,9 @@ footer {
 
 .qr-panel button.quiet {
   margin: 0;
-  border: 1px solid var(--color-navy);
-  background: none;
-  color: var(--color-navy);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-raised);
+  color: var(--color-text);
 }
 
 #qr-holder {
@@ -593,7 +598,7 @@ footer {
   display: flex;
   padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--color-hairline);
-  background: var(--color-cream);
+  background: var(--color-surface);
 }
 
 .tabs button {
@@ -608,8 +613,22 @@ footer {
   font-weight: 500;
 }
 
+/* A filled pill behind the tab you are on, rather than a colour change alone.
+   Reads at a glance without needing a shadow. */
 .tabs button[aria-current='page'] {
-  color: var(--color-navy);
+  color: var(--color-action-text);
+}
+
+.tabs button[aria-current='page'] .tab-pill {
+  background: var(--color-action);
+}
+
+.tab-pill {
+  display: block;
+  width: 44px;
+  margin: 0 auto 4px;
+  padding: 5px 0;
+  border-radius: 999px;
 }
 
 .tabs svg {
@@ -691,9 +710,10 @@ body.has-tabs {
 
 .request-card {
   margin-bottom: 14px;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--color-hairline);
-  border-radius: 8px;
+  border-radius: 12px;
+  background: var(--color-raised);
 }
 
 .request-card h2 {
@@ -866,4 +886,62 @@ button:active:not(:disabled) {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+
+/* Stat tiles. One line of text said "12 of 25 checked in"; three numbers can
+   be read across a room, which is where a karyakar is standing. */
+.tiles {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+
+.tile {
+  flex: 1;
+  padding: 14px 8px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 12px;
+  background: var(--color-raised);
+  text-align: center;
+}
+
+.tile-number {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.tile-label {
+  display: block;
+  margin-top: 5px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.tile[data-tone='good'] .tile-number { color: var(--color-green-text); }
+.tile[data-tone='bad'] .tile-number { color: var(--color-red-text); }
+
+/* Initials, because there are no photographs and never will be. Gives the
+   roster a rhythm to scan down. */
+.initials {
+  display: inline-flex;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--color-navy);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.person-row,
+.person-link {
+  align-items: center;
 }

@@ -1,37 +1,49 @@
 /* BKST design tokens — see docs/spec.md section 9.
-   Every color in the app comes from here. Never write a hex value elsewhere. */
+   Every colour in the app comes from here. Never write a hex value elsewhere.
+
+   The palette is dark. The meanings are unchanged from the cream original:
+   red is a real consequence, gold is worth-a-word, green is passing. Only the
+   ground moved, and every status colour was re-derived to sit on it without
+   glowing.
+
+   The action colour is cream, not gold. Gold already means soft warning, and
+   section 9 is explicit that the brand colour and the alarm colour must not be
+   cousins — the reason maroon was rejected in the first place. */
 
 :root {
-  /* Brand, structure, primary actions */
-  --color-navy: #1E3A5F;
+  /* Ground */
+  --color-surface: #101B2B;        /* the page */
+  --color-raised: #182739;         /* cards, tiles, anything lifted off it */
+  --color-navy: #1E3A5F;           /* brand navy, kept for structure */
 
-  /* Page surface */
-  --color-cream: #FAF3E3;
+  /* Type */
+  --color-text: #F3EAD6;           /* cream, from the original palette */
+  --color-text-muted: #94A5BC;
+
+  /* The one action colour. Cream on navy: no cousin of any status colour. */
+  --color-action: #FAF3E3;
+  --color-action-text: #16243A;
 
   /* Gold — small highlights, soft warnings */
-  --color-gold-bg: #E8DBB8;
-  --color-gold-text: #7A5C14;
+  --color-gold-bg: #3A2E17;
+  --color-gold-text: #E3C583;
 
   /* Red — problems only (below 80%, absence warnings) */
-  --color-red-bg: #F6DCDC;
-  --color-red-text: #8E2A2A;
+  --color-red-bg: #3B1D20;
+  --color-red-text: #EE9A9A;
 
   /* Green — passing */
-  --color-green-bg: #DCEDE2;
-  --color-green-text: #2F6B4F;
-
-  /* Text */
-  --color-text: var(--color-navy);
-  --color-text-muted: #7A6E52;
+  --color-green-bg: #16342A;
+  --color-green-text: #7FCFA5;
 
   /* Hairline borders */
-  --color-hairline: #E0D5B8;
+  --color-hairline: #25384F;
 
   /* Quiet surface — disabled controls, states with no consequence */
-  --color-muted-surface: #F0E7D2;
+  --color-muted-surface: #1E2E42;
 
   /* The check-in QR. Deliberately outside the palette: scanners want maximum
-     contrast, and a cream-on-navy code fails in poor light. */
+     contrast, and a tinted code fails in poor light. */
   --color-qr-dark: #000000;
   --color-qr-light: #FFFFFF;
 

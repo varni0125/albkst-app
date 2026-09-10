@@ -1502,7 +1502,7 @@ function scheduleForm(item) {
     `<div class="pair">${timeField('Start', 'sf-start', item?.rawTime)}${timeField('End', 'sf-end', item?.rawEndTime)}</div>` +
     field('What', 'sf-item', item?.item, 'Dinner') +
     `<div class="pair">${field('Presenter', 'sf-presenter', item?.presenter, '')}${field('Location', 'sf-location', item?.location, 'Main Hall')}</div>` +
-    `<label class="checkline"><input type="checkbox" id="sf-meal" ${item?.isMeal ? 'checked' : ''} /> This is a meal</label>` +
+    `<label class="checkline"><input type="checkbox" id="sf-meal" ${item?.isMeal ? 'checked' : ''} /> This is a meal, with a menu</label>` +
     `<div class="field" id="sf-menu-field"${item?.isMeal ? '' : ' hidden'}>` +
     '<label for="sf-menu">Menu</label>' +
     `<textarea id="sf-menu" rows="2" placeholder="Rotli, shaak, dal bhaat, salad">${escape(item?.note || '')}</textarea>` +
@@ -1828,7 +1828,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=24').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=25').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

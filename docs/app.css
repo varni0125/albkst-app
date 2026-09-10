@@ -1066,15 +1066,6 @@ body.dialog-open {
   overflow: hidden;
 }
 
-.schedule-form .pair {
-  display: flex;
-  gap: 10px;
-}
-
-.schedule-form .pair .field {
-  flex: 1;
-}
-
 .schedule-form label {
   font-size: 13px;
 }
@@ -1153,9 +1144,21 @@ input[type='time']::-webkit-calendar-picker-indicator {
   margin-bottom: 14px;
 }
 
-/* A native time input carries its own intrinsic width, so in a flex row it
-   refuses to shrink and the two fields overlap. min-width: 0 lets them. */
+/* The quiet actions under a dialog are separate lines, not a run-on. */
+.schedule-form .linkish {
+  display: block;
+  width: auto;
+  margin: 14px 0 0;
+  text-align: left;
+}
+
+
+/* Two fields side by side in the dialog.
+   A native time input carries an intrinsic width from its own shadow DOM, so
+   the flex item AND the input both have to be allowed to shrink. Setting it on
+   the field alone left the two overlapping. */
 .schedule-form .pair {
+  display: flex;
   gap: 12px;
 }
 
@@ -1167,18 +1170,47 @@ input[type='time']::-webkit-calendar-picker-indicator {
 .schedule-form input,
 .schedule-form textarea {
   width: 100%;
+  min-width: 0;
   max-width: 100%;
   text-align: left;
 }
 
 .schedule-form input[type='time'] {
-  padding: 11px 10px;
+  padding: 11px 8px;
+  font-size: 16px;
 }
 
-/* The quiet actions under a dialog are separate lines, not a run-on. */
+/* Compact, so the whole form fits without hunting below the fold. The menu
+   field appearing was pushing Save off the bottom of the screen. */
+.schedule-form {
+  padding: 18px;
+}
+
+.schedule-form h2 {
+  margin-bottom: 12px;
+}
+
+.schedule-form .field {
+  margin-bottom: 12px;
+}
+
+.schedule-form label {
+  margin-bottom: 4px;
+}
+
+.schedule-form input,
+.schedule-form textarea {
+  padding: 9px 12px;
+}
+
+.schedule-form .checkline {
+  margin: 2px 0 12px;
+}
+
+.schedule-form button[type='button'] {
+  margin-top: 4px;
+}
+
 .schedule-form .linkish {
-  display: block;
-  width: auto;
-  margin: 14px 0 0;
-  text-align: left;
+  margin-top: 10px;
 }

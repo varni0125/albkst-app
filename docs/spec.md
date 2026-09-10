@@ -438,6 +438,9 @@ basis of nothing is worse than no headline.
 2. **Delegates** — searchable directory; tapping someone gives their history
    across every session, their absence count, and PIN reset. Reaching a person
    should not require opening a session
+   - Karyakars are listed here too, with nothing but a PIN reset. They have no
+     attendance to show, and a forgotten karyakar PIN otherwise has no way
+     back short of editing the sheet
 3. **Scores** — manual entry, and later the grading queue (phase 2) and the
    homework queue (phase 3)
 4. **Attention** — needs-attention dashboard, badged with what is waiting

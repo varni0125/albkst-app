@@ -67,6 +67,17 @@ export async function directory(env) {
     (a, b) => rank(a) - rank(b) || String(a).localeCompare(String(b))
   );
 
+  // Karyakars belong on this screen too. Section 11 says any karyakar can
+  // reset another's PIN, and until now there was nowhere to do it: forget
+  // yours and the only route back was someone editing the sheet.
+  const karyakars = (await readTab(env, 'karyakars'))
+    .filter((row) => row.karyakar_id && isTrue(row.active))
+    .map((row) => ({
+      id: row.karyakar_id,
+      name: fullName(row.first_name, row.last_name),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   return {
     total: people.length,
     groups: centers.map((center) => ({
@@ -75,6 +86,7 @@ export async function directory(env) {
         .filter((p) => p.center === center)
         .sort((a, b) => a.name.localeCompare(b.name)),
     })),
+    karyakars,
   };
 }
 

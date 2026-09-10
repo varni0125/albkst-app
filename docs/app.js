@@ -790,12 +790,76 @@ function renderDirectory(filter = '') {
     }
     list.append(panel);
   }
+  // Karyakars, so a forgotten PIN has somewhere to be reset from.
+  const karyakars = (lastDirectory.karyakars || []).filter((k) =>
+    k.name.toLowerCase().includes(needle)
+  );
+  if (karyakars.length) {
+    shown += karyakars.length;
+    const head = document.createElement('div');
+    head.className = 'center-head';
+    head.innerHTML = `<span>Karyakars</span><span>${karyakars.length}</span>`;
+    list.append(head);
+
+    const panel = document.createElement('div');
+    panel.className = 'list';
+    for (const person of karyakars) {
+      const row = document.createElement('button');
+      row.className = 'person-link';
+      row.type = 'button';
+      row.innerHTML =
+        `<span class="initials">${escape(initialsOf(person.name))}</span>` +
+        `<span class="person-name">${escape(person.name)}</span>` +
+        `<span class="person-meta">${escape(person.id)}</span>`;
+      row.addEventListener('click', () => karyakarActions(person));
+      panel.append(row);
+    }
+    list.append(panel);
+  }
+
   if (!shown) {
     const empty = document.createElement('p');
     empty.className = 'empty';
     empty.textContent = 'Nobody by that name.';
     list.append(empty);
   }
+}
+
+// A karyakar has no attendance to show, so there is no detail screen worth
+// opening: the only thing anyone needs here is the reset.
+function karyakarActions(person) {
+  openDialog((panel) => {
+    panel.innerHTML =
+      `<h2>${escape(person.name)}</h2>` +
+      `<p class="lede">Karyakar &middot; ${escape(person.id)}</p>` +
+      '<p class="hint">Resetting clears their PIN. They choose a new one the ' +
+      'next time they sign in, and it is logged against your name.</p>';
+
+    const actions = document.createElement('div');
+    actions.className = 'dialog-actions';
+
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.dataset.kind = 'danger';
+    reset.textContent = 'Reset PIN';
+    reset.addEventListener('click', async () => {
+      const { ok, body } = await call('/auth/reset-pin', {
+        method: 'POST',
+        body: JSON.stringify({ id: person.id }),
+      });
+      closeScheduleForm();
+      say(ok ? body.message : body.error || 'Could not reset that PIN.', ok ? 'good' : 'problem');
+    });
+    actions.append(reset);
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', closeScheduleForm);
+    actions.append(cancel);
+
+    panel.append(actions);
+  });
 }
 
 async function openDelegate(bkId) {
@@ -1856,7 +1920,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=31').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=32').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

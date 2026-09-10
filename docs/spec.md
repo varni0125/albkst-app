@@ -128,6 +128,7 @@ Google Sheet, one tab per table.
 | first_name, last_name | |
 | active | false when someone stops serving |
 | created_at | |
+| admin | may add and remove people. A column rather than an ID in the code, so handing it on is a cell edit |
 
 No PIN column — credentials live in KV, per section 2.
 
@@ -517,6 +518,13 @@ for each delegate.
   than introducing a new one.
 - **PIN resets** — any karyakar can reset any delegate's PIN, and any other
   karyakar's. Log who did it and when.
+
+- **Adding and removing people** — an admin karyakar only. Removing sets
+  `active` false; it never deletes a row, because the attendance would be left
+  pointing at nobody and any absence spent would vanish from the record.
+  Someone removed can be brought back. An admin cannot remove themselves, the
+  last karyakar cannot be removed, and the last admin cannot be removed: each
+  would leave nobody able to open check-in or reset a PIN.
 
 - **Excused absence** — excluded from the grade entirely, not recorded as a
   zero. Delegate is graded on sessions attended. The 80% applies per session.

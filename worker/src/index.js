@@ -26,6 +26,13 @@ import {
   pendingRequests,
 } from './requests.js';
 import { directory, delegateDetail, dashboard } from './people.js';
+import {
+  isAdmin,
+  addDelegate,
+  addKaryakar,
+  setActive,
+  removedPeople,
+} from './roster-admin.js';
 import { scheduleFor, addItem, editItem, removeItem, itemProblem, shiftFrom, shiftPreview } from './schedule.js';
 
 export { Account };
@@ -83,8 +90,12 @@ async function handleLogin(request, env) {
   await store.clearFailures();
   return json(env, {
     token: await signToken(env, { sub: id, role: account.role }),
-    account,
+    account: { ...account, admin: await adminFlag(env, account) },
   });
+}
+
+async function adminFlag(env, account) {
+  return account.role === 'karyakar' && (await isAdmin(env, account.id));
 }
 
 // First login only. Setting a PIN over an existing one is refused; replacing
@@ -107,7 +118,7 @@ async function handleSetPin(request, env) {
 
   return json(env, {
     token: await signToken(env, { sub: id, role: account.role }),
-    account,
+    account: { ...account, admin: await adminFlag(env, account) },
   });
 }
 
@@ -150,7 +161,14 @@ export default {
           ? null
           : fail(env, 403, 'That is not available to you.');
 
-      if (method === 'GET' && path === '/me') return json(env, { account });
+      if (method === 'GET' && path === '/me') {
+        return json(env, {
+          account: {
+            ...account,
+            admin: await adminFlag(env, account),
+          },
+        });
+      }
 
       if (method === 'GET' && path === '/me/standing') {
         if (account.role !== 'delegate') {
@@ -178,6 +196,44 @@ export default {
         const detail = await delegateDetail(env, delegateMatch[1]);
         if (!detail) return fail(env, 404, 'No such delegate.');
         return json(env, detail);
+      }
+
+      // Adding and removing people. Restricted here, not by hiding a button.
+      const rosterRoutes = ['/roster/delegate', '/roster/karyakar', '/roster/active', '/roster/removed'];
+      if (rosterRoutes.includes(path)) {
+        const denied = karyakarOnly();
+        if (denied) return denied;
+        if (!(await isAdmin(env, account.id))) {
+          return fail(env, 403, 'Only an admin karyakar can change the roster.');
+        }
+
+        if (method === 'GET' && path === '/roster/removed') {
+          return json(env, await removedPeople(env));
+        }
+        if (method === 'POST' && path === '/roster/delegate') {
+          const result = await addDelegate(env, await readJson(request));
+          if (result.error) return fail(env, 400, result.error);
+          return json(env, { ok: true, message: `${result.name} added.` });
+        }
+        if (method === 'POST' && path === '/roster/karyakar') {
+          const result = await addKaryakar(env, await readJson(request));
+          if (result.error) return fail(env, 400, result.error);
+          return json(env, {
+            ok: true,
+            message: `${result.name} added. They set a PIN at their first sign in.`,
+          });
+        }
+        if (method === 'POST' && path === '/roster/active') {
+          const { kind, id, active } = await readJson(request);
+          if (!['delegate', 'karyakar'].includes(kind)) return fail(env, 400, 'Which kind?');
+          const result = await setActive(env, kind, String(id || '').trim(), Boolean(active), account.id);
+          if (result.error) return fail(env, 400, result.error);
+          return json(env, {
+            ok: true,
+            message: `${result.name} ${active ? 'brought back' : 'removed'}.`,
+          });
+        }
+        return fail(env, 404, 'Not found.');
       }
 
       if (method === 'GET' && path === '/dashboard') {

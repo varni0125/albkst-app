@@ -45,7 +45,8 @@ let lastDashboard = null;
 let lastSchedule = null;
 let scheduleSessionId = null;
 let openDay = 1;
-let peopleView = 'delegates'; // or 'karyakars'
+let peopleView = 'delegates'; // or 'karyakars' or 'removed'
+let lastRemoved = null;
 let currentTab = null;
 let previousStatus = new Map(); // bkId -> status, so only real changes animate
 let shownTally = null;          // the number currently on screen, for counting up
@@ -762,10 +763,12 @@ function renderPeopleSwitch() {
     delegates: lastDirectory?.total || 0,
     karyakars: (lastDirectory?.karyakars || []).length,
   };
-  for (const key of ['delegates', 'karyakars']) {
+  const views = account?.admin ? ['delegates', 'karyakars', 'removed'] : ['delegates', 'karyakars'];
+  for (const key of views) {
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = key === 'delegates' ? 'Delegates' : 'Karyakars';
+    button.textContent =
+      key === 'delegates' ? 'Delegates' : key === 'karyakars' ? 'Karyakars' : 'Removed';
     if (peopleView === key) button.setAttribute('aria-current', 'page');
     button.addEventListener('click', () => {
       peopleView = key;
@@ -776,7 +779,18 @@ function renderPeopleSwitch() {
   document.getElementById('delegates-count').textContent =
     peopleView === 'delegates'
       ? `${counts.delegates} delegates across five centres.`
-      : `${counts.karyakars} ${counts.karyakars === 1 ? 'karyakar' : 'karyakars'}.`;
+      : peopleView === 'karyakars'
+        ? `${counts.karyakars} ${counts.karyakars === 1 ? 'karyakar' : 'karyakars'}.`
+        : 'Removed from the roster. Their history is kept.';
+
+  // Adding is an admin's job, and only on a screen where it makes sense.
+  const add = document.getElementById('roster-add');
+  const canAdd = account?.admin && peopleView !== 'removed';
+  add.hidden = !canAdd;
+  if (canAdd) {
+    add.textContent = peopleView === 'delegates' ? 'Add a delegate' : 'Add a karyakar';
+    add.onclick = () => addPersonDialog(peopleView === 'delegates' ? 'delegate' : 'karyakar');
+  }
 }
 
 function renderDirectory(filter = '') {
@@ -789,6 +803,7 @@ function renderDirectory(filter = '') {
   // Two screens, not one mixed list: a roster and a staff list answer
   // different questions.
   if (peopleView === 'karyakars') return renderKaryakars(needle, list);
+  if (peopleView === 'removed') return renderRemoved(needle, list);
 
   let shown = 0;
   for (const group of lastDirectory.groups) {
@@ -854,6 +869,152 @@ function renderKaryakars(needle, list) {
   list.append(panel);
 }
 
+async function renderRemoved(needle, list) {
+  if (!lastRemoved) {
+    const { ok, body } = await call('/roster/removed');
+    if (!ok) return say(body.error || 'Could not load that.');
+    lastRemoved = body;
+  }
+  const rows = [
+    ...lastRemoved.delegates.map((d) => ({ ...d, kind: 'delegate' })),
+    ...lastRemoved.karyakars.map((k) => ({ ...k, kind: 'karyakar' })),
+  ].filter((r) => r.name.toLowerCase().includes(needle));
+
+  if (!rows.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.textContent = 'Nobody has been removed.';
+    list.append(empty);
+    return;
+  }
+
+  const panel = document.createElement('div');
+  panel.className = 'list';
+  for (const person of rows) {
+    const row = document.createElement('button');
+    row.className = 'person-link';
+    row.type = 'button';
+    row.innerHTML =
+      `<span class="initials">${escape(initialsOf(person.name))}</span>` +
+      `<span class="person-name">${escape(person.name)}</span>` +
+      `<span class="person-meta">${escape(person.id)}</span>`;
+    row.addEventListener('click', () => confirmActive(person, true));
+    panel.append(row);
+  }
+  list.append(panel);
+}
+
+// Removing and bringing back share a dialog, because they are the same
+// decision seen from either side.
+function confirmActive(person, bringBack) {
+  openDialog((panel) => {
+    panel.innerHTML =
+      `<h2>${escape(person.name)}</h2>` +
+      `<p class="lede">${person.kind === 'karyakar' ? 'Karyakar' : 'Delegate'} &middot; ${escape(person.id)}</p>` +
+      `<p class="hint">${
+        bringBack
+          ? 'They go back on the roster and can sign in again.'
+          : 'They come off every roster and cannot sign in. Their attendance stays on record, and you can bring them back.'
+      }</p>`;
+
+    const actions = document.createElement('div');
+    actions.className = 'dialog-actions';
+
+    const go = document.createElement('button');
+    go.type = 'button';
+    if (!bringBack) go.dataset.kind = 'danger';
+    go.textContent = bringBack ? 'Bring back' : 'Remove';
+    go.addEventListener('click', async () => {
+      const { ok, body } = await call('/roster/active', {
+        method: 'POST',
+        body: JSON.stringify({ kind: person.kind, id: person.id, active: bringBack }),
+      });
+      closeScheduleForm();
+      say(ok ? body.message : body.error || 'That did not work.', ok ? 'good' : 'problem');
+      if (ok) {
+        lastRemoved = null;
+        lastDirectory = null;
+        lastPayload.delegates = null;
+        showDirectory();
+      }
+    });
+    actions.append(go);
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', closeScheduleForm);
+    actions.append(cancel);
+    panel.append(actions);
+  });
+}
+
+function addPersonDialog(kind) {
+  openDialog((panel) => {
+    const field = (label, id, placeholder) =>
+      `<div class="field"><label for="${id}">${label}</label>` +
+      `<input id="${id}" type="text" placeholder="${placeholder}" autocomplete="off" /></div>`;
+
+    panel.innerHTML =
+      `<h2>Add a ${kind}</h2>` +
+      (kind === 'delegate'
+        ? field('BK ID', 'ap-id', '18966') +
+          `<div class="pair">${field('First name', 'ap-first', 'Dhruv')}${field('Last name', 'ap-last', 'Patel')}</div>` +
+          '<div class="pair">' +
+          '<div class="field"><label for="ap-grade">Grade</label><select id="ap-grade">' +
+          ['9', '10', '11', '12'].map((g) => `<option value="${g}">${g}th</option>`).join('') +
+          '</select></div>' +
+          '<div class="field"><label for="ap-center">Centre</label><select id="ap-center">' +
+          ['Birmingham', 'Dothan', 'Huntsville', 'Mobile', 'Montgomery']
+            .map((c) => `<option value="${c}">${c}</option>`).join('') +
+          '</select></div></div>'
+        : field('Karyakar ID', 'ap-id', 'K003') +
+          `<div class="pair">${field('First name', 'ap-first', 'Veer')}${field('Last name', 'ap-last', 'Patel')}</div>` +
+          '<p class="hint">They choose their own PIN the first time they sign in.</p>');
+
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.textContent = `Add ${kind}`;
+    save.addEventListener('click', async () => {
+      const value = (id) => document.getElementById(id)?.value.trim() || '';
+      const body =
+        kind === 'delegate'
+          ? {
+              bkId: value('ap-id'),
+              firstName: value('ap-first'),
+              lastName: value('ap-last'),
+              grade: value('ap-grade'),
+              center: value('ap-center'),
+            }
+          : {
+              karyakarId: value('ap-id'),
+              firstName: value('ap-first'),
+              lastName: value('ap-last'),
+            };
+      const result = await call(`/roster/${kind}`, { method: 'POST', body: JSON.stringify(body) });
+      if (!result.ok) return say(result.body.error || 'That did not save.');
+      closeScheduleForm();
+      say(result.body.message, 'good');
+      lastDirectory = null;
+      lastPayload.delegates = null;
+      showDirectory();
+    });
+    panel.append(save);
+
+    const actions = document.createElement('div');
+    actions.className = 'dialog-actions';
+    actions.style.gridTemplateColumns = 'minmax(0, 1fr)';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', closeScheduleForm);
+    actions.append(cancel);
+    panel.append(actions);
+
+    document.getElementById('ap-id').focus();
+  });
+}
+
 // A karyakar has no attendance to show, so there is no detail screen worth
 // opening: the only thing anyone needs here is the reset.
 function karyakarActions(person) {
@@ -881,11 +1042,21 @@ function karyakarActions(person) {
     });
     actions.append(reset);
 
-    const cancel = document.createElement('button');
-    cancel.type = 'button';
-    cancel.textContent = 'Cancel';
-    cancel.addEventListener('click', closeScheduleForm);
-    actions.append(cancel);
+    if (account?.admin) {
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', () =>
+        confirmActive({ ...person, kind: 'karyakar' }, false)
+      );
+      actions.append(remove);
+    } else {
+      const cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.textContent = 'Cancel';
+      cancel.addEventListener('click', closeScheduleForm);
+      actions.append(cancel);
+    }
 
     panel.append(actions);
   });
@@ -926,6 +1097,21 @@ async function openDelegate(bkId) {
       item.append(p);
     }
     history.append(item);
+  }
+
+  const removeHolder = document.getElementById('detail-reset').parentElement;
+  const existing = removeHolder.querySelector('#detail-remove');
+  if (existing) existing.remove();
+  if (account?.admin) {
+    const remove = document.createElement('button');
+    remove.className = 'linkish';
+    remove.id = 'detail-remove';
+    remove.type = 'button';
+    remove.textContent = 'Remove from roster';
+    remove.addEventListener('click', () =>
+      confirmActive({ id: body.bkId, name: body.name, kind: 'delegate' }, false)
+    );
+    document.getElementById('detail-reset').after(remove);
   }
 
   const reset = document.getElementById('detail-reset');
@@ -1930,6 +2116,7 @@ document.getElementById('qr-save').addEventListener('click', saveCode);
 document.getElementById('delegate-search').addEventListener('input', (event) =>
   renderDirectory(event.target.value)
 );
+document.getElementById('roster-add').addEventListener('click', () => {});
 
 // Show and hide a PIN. Mistyping one you cannot see is the likeliest way to
 // get locked out, and the lockout is fifteen minutes.
@@ -1949,7 +2136,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=33').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=34').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

@@ -516,8 +516,14 @@ for each delegate.
 - **National permission** — not a blocker. The program previously ran these
   quizzes through Google Classroom; the app replaces a tedious workflow rather
   than introducing a new one.
-- **PIN resets** — any karyakar can reset any delegate's PIN, and any other
-  karyakar's. Log who did it and when.
+- **PIN resets** — any karyakar can reset a delegate's PIN, which happens at a
+  session with the delegate standing there. Resetting *another karyakar's* is
+  an admin's, because a karyakar account can change grades and end someone's
+  participation. Log who did it and when.
+
+  The cost of that: if the only admin forgets their own PIN, nobody can reset
+  it. Keep a second admin, or accept that the way back is editing the
+  spreadsheet by hand.
 
 - **Adding and removing people** — an admin karyakar only. Removing sets
   `active` false; it never deletes a row, because the attendance would be left

@@ -1022,25 +1022,31 @@ function karyakarActions(person) {
     panel.innerHTML =
       `<h2>${escape(person.name)}</h2>` +
       `<p class="lede">Karyakar &middot; ${escape(person.id)}</p>` +
-      '<p class="hint">Resetting clears their PIN. They choose a new one the ' +
-      'next time they sign in, and it is logged against your name.</p>';
+      (account?.admin
+        ? '<p class="hint">Resetting clears their PIN. They choose a new one the ' +
+          'next time they sign in, and it is logged against your name.</p>'
+        : '<p class="hint">Only an admin karyakar can reset another karyakar\'s PIN.</p>');
 
     const actions = document.createElement('div');
     actions.className = 'dialog-actions';
 
-    const reset = document.createElement('button');
-    reset.type = 'button';
-    reset.dataset.kind = 'danger';
-    reset.textContent = 'Reset PIN';
-    reset.addEventListener('click', async () => {
-      const { ok, body } = await call('/auth/reset-pin', {
-        method: 'POST',
-        body: JSON.stringify({ id: person.id }),
+    // Only an admin may reset another karyakar. The Worker refuses it either
+    // way; this stops offering a button that would only be turned down.
+    if (account?.admin) {
+      const reset = document.createElement('button');
+      reset.type = 'button';
+      reset.dataset.kind = 'danger';
+      reset.textContent = 'Reset PIN';
+      reset.addEventListener('click', async () => {
+        const { ok, body } = await call('/auth/reset-pin', {
+          method: 'POST',
+          body: JSON.stringify({ id: person.id }),
+        });
+        closeScheduleForm();
+        say(ok ? body.message : body.error || 'Could not reset that PIN.', ok ? 'good' : 'problem');
       });
-      closeScheduleForm();
-      say(ok ? body.message : body.error || 'Could not reset that PIN.', ok ? 'good' : 'problem');
-    });
-    actions.append(reset);
+      actions.append(reset);
+    }
 
     if (account?.admin) {
       const remove = document.createElement('button');
@@ -2136,7 +2142,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=34').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=35').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

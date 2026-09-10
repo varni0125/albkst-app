@@ -128,6 +128,14 @@ async function handleResetPin(request, env, actor) {
   const target = await lookupAccount(env, id);
   if (!target) return fail(env, 404, 'No active account with that ID.');
 
+  // Any karyakar can reset a delegate: that happens at a session, with the
+  // delegate standing there. Resetting another karyakar is a different thing,
+  // because a karyakar account can change grades and end someone's
+  // participation, so it is an admin's to do.
+  if (target.role === 'karyakar' && !(await isAdmin(env, actor.id))) {
+    return fail(env, 403, "Only an admin karyakar can reset another karyakar's PIN.");
+  }
+
   await accountStore(env, id).resetPin();
   // Who reset whose PIN, and when. Section 11 of the spec asks for this.
   console.log(

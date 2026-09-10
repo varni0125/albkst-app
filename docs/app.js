@@ -1460,9 +1460,15 @@ function scheduleForm(item) {
     `<div class="field"><label for="${id}">${label}</label>` +
     `<input id="${id}" type="text" value="${escape(value || '')}" placeholder="${placeholder || ''}" /></div>`;
 
+  // A real time input: the phone shows its own picker, which is twelve hour
+  // on an American iPhone, and hands back 24 hour, which is what sorts.
+  const timeField = (label, id, value) =>
+    `<div class="field"><label for="${id}">${label}</label>` +
+    `<input id="${id}" type="time" value="${escape(value || '')}" /></div>`;
+
   form.innerHTML =
     `<h2>${item ? 'Change this item' : 'Add an item'}</h2>` +
-    `<div class="pair">${field('Start', 'sf-start', item?.rawTime, '19:30')}${field('End', 'sf-end', item?.rawEndTime, '20:30')}</div>` +
+    `<div class="pair">${timeField('Start', 'sf-start', item?.rawTime)}${timeField('End', 'sf-end', item?.rawEndTime)}</div>` +
     field('What', 'sf-item', item?.item, 'Dinner') +
     `<div class="pair">${field('Presenter', 'sf-presenter', item?.presenter, '')}${field('Location', 'sf-location', item?.location, 'Main Hall')}</div>` +
     `<label class="checkline"><input type="checkbox" id="sf-meal" ${item?.isMeal ? 'checked' : ''} /> This is a meal</label>`;
@@ -1678,7 +1684,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=20').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=21').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

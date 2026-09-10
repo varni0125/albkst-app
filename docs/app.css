@@ -1114,3 +1114,14 @@ body.dialog-open {
   font-size: 12px;
   font-weight: 500;
 }
+
+/* The phone's own time picker, made to match everything else. */
+input[type='time'] {
+  min-height: 46px;
+  font-variant-numeric: tabular-nums;
+}
+
+input[type='time']::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.5;
+}

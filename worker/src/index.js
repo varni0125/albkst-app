@@ -28,6 +28,7 @@ import {
 import { directory, delegateDetail, dashboard } from './people.js';
 
 export { Account };
+export { CheckinBuffer } from './checkin-buffer.js';
 
 // Deliberately identical for an unknown ID, a deactivated account, and a wrong
 // PIN. Anything more specific tells a guesser which IDs are worth attacking.

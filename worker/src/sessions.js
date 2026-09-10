@@ -8,6 +8,7 @@
 import { readTab, appendRows, updateRowWhere } from './sheets.js';
 import { codeIsValid } from './checkin-code.js';
 import { deniedFor, requestsFor, requestState, todayLocal } from './requests.js';
+import { checkinBuffer } from './checkin-buffer.js';
 
 const CENTER_ORDER = ['Birmingham', 'Dothan', 'Huntsville', 'Mobile', 'Montgomery'];
 const isTrue = (value) => String(value).trim().toLowerCase() === 'true';
@@ -103,10 +104,19 @@ function absenceCounts(latest) {
 }
 
 export async function rosterFor(env, sessionId) {
-  const [delegates, latest] = await Promise.all([
+  const [delegates, latest, waiting] = await Promise.all([
     readTab(env, 'delegates'),
     reconcile(env),
+    checkinBuffer(env, sessionId).pending(),
   ]);
+
+  // Anyone whose check-in is buffered but not yet in the Sheet still counts as
+  // present, so a karyakar watching the count never sees it lag the room.
+  for (const row of waiting) {
+    const key = `${row.session_id}|${row.bk_id}`;
+    const held = latest.get(key);
+    if (!held || String(row.marked_at) >= String(held.marked_at)) latest.set(key, row);
+  }
   const counts = absenceCounts(latest);
 
   const people = delegates
@@ -202,21 +212,24 @@ export async function selfCheckin(env, session, bkId, code) {
       error: 'That code has expired. Scan the code on the karyakar screen again.',
     };
   }
-  const latest = await reconcile(env);
-  const existing = latest.get(`${session.session_id}|${bkId}`);
-  if (existing && existing.status === 'present') {
-    return { ok: true, alreadyCheckedIn: true };
-  }
-  await appendRows(env, 'attendance', [
+  // Buffered, not written. Twenty-five people tapping at once is twenty-five
+  // writes to one spreadsheet, which Google serialises; measured, it took
+  // minutes and seven check-ins were lost. The buffer records this durably and
+  // flushes everything as a single append a second later.
+  //
+  // No read first either: checking whether they were already present cost a
+  // read of the whole ledger per check-in, and the ledger tolerates a
+  // duplicate by design — the most recent row wins and both are kept.
+  await checkinBuffer(env, session.session_id).queue(
     attendanceRow({
       sessionId: session.session_id,
       bkId,
       status: 'present',
       source: 'self_checkin',
       actorId: bkId,
-    }),
-  ]);
-  return { ok: true, alreadyCheckedIn: false };
+    })
+  );
+  return { ok: true };
 }
 
 export async function markAttendance(env, session, entry, actorId) {

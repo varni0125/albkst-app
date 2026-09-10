@@ -21,3 +21,13 @@ ALLOWED_ORIGIN = "https://varni0125.github.io"
 #   GOOGLE_SA_PRIVATE_KEY  service account private key (PEM)
 #   SHEET_ID               the spreadsheet id
 #   JWT_SECRET             random string used to sign login tokens
+
+# One buffer per session. Twenty-five simultaneous check-ins become a single
+# append, because Google serialises writes to one spreadsheet.
+[[durable_objects.bindings]]
+name = "CHECKINS"
+class_name = "CheckinBuffer"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["CheckinBuffer"]

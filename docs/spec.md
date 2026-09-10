@@ -152,6 +152,11 @@ No PIN column — credentials live in KV, per section 2.
 | source | self_checkin / karyakar_marked |
 | marked_at, marked_by | |
 
+**Written through a buffer.** A self check-in is recorded durably the instant
+it is tapped and flushed to the Sheet a second later, with everyone else's, as
+a single append. Google serialises writes to one spreadsheet, and twenty-five
+people tapping at once measured at nine of them failing.
+
 **Append-only.** Every check-in and every karyakar mark adds a row; nothing is
 overwritten. Twenty-five delegates checking in within the same two minutes would
 otherwise race on a read-modify-write and silently lose a tap. The Worker

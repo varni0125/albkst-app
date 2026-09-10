@@ -28,8 +28,63 @@ const TAB_MAX_AGE_MS = {
 const tabCache = new Map(); // tab -> { rows, at }
 const headerCache = new Map(); // tab -> headers, which never change
 
+// Every tab this app reads. A cache miss fetches all of them in one request
+// rather than one request per tab.
+//
+// Google counts requests, not rows, and the whole spreadsheet is a few
+// hundred rows. Twenty-five delegates opening the app at once, each request
+// reading four tabs separately, was a hundred reads against a limit of sixty
+// a minute — and the seventh person onwards got an error. One batched read
+// makes that twenty-five, and warms every tab at the same time.
+const ALL_TABS = [
+  'delegates',
+  'karyakars',
+  'sessions',
+  'attendance',
+  'scores',
+  'absence_requests',
+];
+
+// Concurrent requests inside one isolate share a single fetch instead of
+// each starting their own.
+let inFlight = null;
+
 function invalidate(tab) {
   tabCache.delete(tab);
+}
+
+function toRecords(values) {
+  const [headers, ...rows] = values || [[]];
+  if (!headers || !headers.length) return { headers: [], records: [] };
+  const records = rows.map((row, i) => {
+    const record = { _row: i + 2 };
+    headers.forEach((name, column) => {
+      record[name] = row[column] ?? '';
+    });
+    return record;
+  });
+  return { headers, records };
+}
+
+async function fetchAllTabs(env) {
+  if (inFlight) return inFlight;
+  inFlight = (async () => {
+    const ranges = ALL_TABS.map((tab) => `ranges=${encodeURIComponent(tab)}`).join('&');
+    const data = await api(env, `/values:batchGet?${ranges}`);
+    const at = Date.now();
+    for (const valueRange of data.valueRanges || []) {
+      const tab = String(valueRange.range || '').split('!')[0].replace(/^'|'$/g, '');
+      if (!tab) continue;
+      const { headers, records } = toRecords(valueRange.values);
+      if (headers.length) headerCache.set(tab, headers);
+      tabCache.set(tab, { rows: records, at });
+    }
+  })();
+  try {
+    await inFlight;
+  } finally {
+    inFlight = null;
+  }
 }
 
 function pemToBinary(pem) {
@@ -100,7 +155,11 @@ async function getAccessToken(env) {
   return cachedToken.token;
 }
 
-async function api(env, path, init = {}) {
+// Google's limit is sixty requests a minute, and a check-in rush can brush
+// against it. A throttled call waits and tries again rather than failing the
+// person standing in front of you; the jitter stops twenty-five retries
+// arriving back in step.
+async function api(env, path, init = {}, attempt = 0) {
   const token = await getAccessToken(env);
   const response = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${env.SHEET_ID}${path}`,
@@ -113,6 +172,13 @@ async function api(env, path, init = {}) {
       },
     }
   );
+
+  if ((response.status === 429 || response.status >= 500) && attempt < 3) {
+    const wait = 400 * 2 ** attempt + Math.random() * 400;
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    return api(env, path, init, attempt + 1);
+  }
+
   const data = await response.json();
   if (!response.ok) {
     throw new Error(
@@ -141,20 +207,17 @@ export async function readTab(env, tab, { fresh = false } = {}) {
   const maxAge = TAB_MAX_AGE_MS[tab] ?? 5000;
   if (!fresh && cached && Date.now() - cached.at < maxAge) return cached.rows;
 
-  const data = await api(env, `/values/${encodeURIComponent(tab)}`);
-  const [headers, ...rows] = data.values || [[]];
-  if (!headers || !headers.length) return [];
-  if (!headerCache.has(tab)) headerCache.set(tab, headers);
+  // One tab only, when the caller needs to be certain it is current.
+  if (fresh) {
+    const data = await api(env, `/values/${encodeURIComponent(tab)}`);
+    const { headers, records } = toRecords(data.values);
+    if (headers.length) headerCache.set(tab, headers);
+    tabCache.set(tab, { rows: records, at: Date.now() });
+    return records;
+  }
 
-  const records = rows.map((row, i) => {
-    const record = { _row: i + 2 };
-    headers.forEach((name, column) => {
-      record[name] = row[column] ?? '';
-    });
-    return record;
-  });
-  tabCache.set(tab, { rows: records, at: Date.now() });
-  return records;
+  await fetchAllTabs(env);
+  return tabCache.get(tab)?.rows || [];
 }
 
 export async function findRow(env, tab, key, value) {
@@ -175,7 +238,21 @@ export async function appendRows(env, tab, records) {
     `/values/${encodeURIComponent(tab)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
     { method: 'POST', body: JSON.stringify({ values }) }
   );
-  invalidate(tab);
+
+  // The rows just written are added to the cache rather than the cache being
+  // thrown away. Discarding it meant every check-in in a rush forced the next
+  // one to re-read the whole spreadsheet, which is how twenty-five check-ins
+  // became fifty API calls and nine people got an error.
+  const cached = tabCache.get(tab);
+  if (cached) {
+    cached.rows = cached.rows.concat(
+      records.map((record) => {
+        const row = { _row: null };
+        for (const name of headers) row[name] = record[name] ?? '';
+        return row;
+      })
+    );
+  }
 }
 
 // Read-modify-write of one row, found by a key rather than by a remembered

@@ -47,6 +47,17 @@ Build the karyakar side first and well — it is the real product.
   that made it. Anything deciding on current state — approving a request,
   marking attendance — must read past the cache, or the same decision can be
   applied twice.
+- **A cache miss reads every tab in one batched request**, not one request per
+  tab. Twenty-five people opening the app at once, each reading four tabs
+  separately, was a hundred reads against a limit of sixty.
+- **Google serialises writes to a single spreadsheet.** Twenty-five delegates
+  tapping check-in at once, each writing its own row, was measured at 16 of 25
+  succeeding with waits of up to five minutes. Self check-ins now go to a
+  durable buffer, one per session, which flushes everything as a single append
+  a second later: 25 of 25, slowest 2.7 seconds. Never write one row per
+  request on a path a whole room uses at once.
+- **An append updates the cache rather than clearing it.** Clearing it meant
+  each check-in forced the next one to re-read the whole spreadsheet.
 - **Attendance is append-only and reconciled by `marked_at`**, never by row
   order. The sheet is something karyakars will sort.
 - **Dates in the sheet must stay `yyyy-mm-dd`.** They are compared as strings.

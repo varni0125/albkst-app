@@ -396,6 +396,41 @@ input[type='time']::-webkit-calendar-picker-indicator {
   font-size: 10px;
 }
 
+/* ---------- grouped lists ---------- */
+
+/* Items live inside one rounded surface, with a separator only between them.
+   A divider under every row, including the last, leaves lines trailing off
+   into nothing and makes a short list look like a form. */
+.list {
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius);
+  background: var(--color-raised);
+  overflow: hidden;
+}
+
+.list > * {
+  border-bottom: none;
+  border-radius: 0;
+}
+
+.list > * + * {
+  border-top: 1px solid var(--color-hairline);
+}
+
+.list .person-row,
+.list .person-link,
+.list .session-line-link,
+.list .slot-row,
+.list .record {
+  padding-left: var(--gap-4);
+  padding-right: var(--gap-4);
+}
+
+.list + .center-head,
+.list + .section-head {
+  margin-top: var(--gap-6);
+}
+
 /* ---------- cards ---------- */
 
 .session-card {
@@ -530,8 +565,7 @@ input[type='time']::-webkit-calendar-picker-indicator {
   display: flex;
   justify-content: space-between;
   margin: 0 0 var(--gap-2);
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--color-hairline);
+  padding: 0 2px;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -544,11 +578,11 @@ input[type='time']::-webkit-calendar-picker-indicator {
 }
 
 .center-group {
-  margin-bottom: var(--gap-6);
+  margin-bottom: var(--gap-5);
 }
 
 .person {
-  border-bottom: 1px solid var(--color-hairline);
+  border-bottom: none;
 }
 
 .person-row,
@@ -569,9 +603,7 @@ input[type='time']::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
-.person-link {
-  border-bottom: 1px solid var(--color-hairline);
-}
+
 
 .person-name {
   flex: 1;
@@ -680,8 +712,7 @@ input[type='time']::-webkit-calendar-picker-indicator {
 
 .record,
 .session-line {
-  padding: var(--gap-4) 2px;
-  border-bottom: 1px solid var(--color-hairline);
+  padding: var(--gap-3) 2px;
 }
 
 .record-head,
@@ -709,9 +740,8 @@ input[type='time']::-webkit-calendar-picker-indicator {
   display: block;
   width: 100%;
   margin: 0;
-  padding: var(--gap-4) 2px;
+  padding: var(--gap-3) 2px;
   border: none;
-  border-bottom: 1px solid var(--color-hairline);
   border-radius: 0;
   background: none;
   color: inherit;
@@ -897,7 +927,6 @@ input[type='time']::-webkit-calendar-picker-indicator {
   display: flex;
   gap: var(--gap-3);
   padding: var(--gap-3) 2px;
-  border-bottom: 1px solid var(--color-hairline);
 }
 
 .slot-time {

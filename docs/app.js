@@ -458,7 +458,10 @@ function renderRoster(roster) {
     head.className = 'center-head';
     head.innerHTML = `<span>${escape(group.center)}</span><span>${group.present} of ${group.total}</span>`;
     section.append(head);
-    for (const person of group.members) section.append(personRow(person));
+    const list = document.createElement('div');
+    list.className = 'list';
+    for (const person of group.members) list.append(personRow(person));
+    section.append(list);
     container.append(section);
   }
 }
@@ -769,6 +772,8 @@ function renderDirectory(filter = '') {
     head.innerHTML = `<span>${escape(group.center)}</span><span>${members.length}</span>`;
     list.append(head);
 
+    const panel = document.createElement('div');
+    panel.className = 'list';
     for (const person of members) {
       const row = document.createElement('button');
       row.className = 'person-link';
@@ -781,8 +786,9 @@ function renderDirectory(filter = '') {
         `<span class="person-name">${escape(person.name)}</span>` +
         `<span class="person-meta">${person.grade ? escape(person.grade) + 'th' : ''}</span>${used}`;
       row.addEventListener('click', () => openDelegate(person.bkId));
-      list.append(row);
+      panel.append(row);
     }
+    list.append(panel);
   }
   if (!shown) {
     const empty = document.createElement('p');
@@ -805,8 +811,11 @@ async function openDelegate(bkId) {
   allowance.textContent = `${body.absencesUsed} of ${body.absencesAllowed} absence used`;
   allowance.dataset.spent = body.absencesUsed > 0 ? 'true' : 'false';
 
-  const history = document.getElementById('detail-history');
-  history.textContent = '';
+  const historyHolder = document.getElementById('detail-history');
+  historyHolder.textContent = '';
+  const history = document.createElement('div');
+  history.className = 'list';
+  historyHolder.append(history);
   for (const record of body.history) {
     const [status, label] = statusLabel(record);
     const item = document.createElement('div');
@@ -847,8 +856,11 @@ async function showScores() {
   const { ok, body } = await call('/sessions');
   if (!ok) return say(body.error || 'Could not load the sessions.');
 
-  const list = document.getElementById('score-list');
-  list.textContent = '';
+  const holder = document.getElementById('score-list');
+  holder.textContent = '';
+  const list = document.createElement('div');
+  list.className = 'list';
+  holder.append(list);
   for (const session of body.sessions) {
     const item = document.createElement('div');
     item.className = 'record';
@@ -862,11 +874,11 @@ async function showScores() {
   }
   const note = document.createElement('p');
   note.className = 'empty';
+  holder.append(note);
   note.textContent =
     'Score entry is still being built. When it is, each session shows the points ' +
     'entered and the grade computed from them. Session one carries no quiz and no ' +
     'homework, so it will have no grade at all and will not count towards the year.';
-  list.append(note);
 }
 
 /* ---------- karyakar: needs attention ---------- */
@@ -1140,8 +1152,11 @@ function renderSlots(sessions) {
 }
 
 function renderSessionLines(sessions) {
-  const list = document.getElementById('session-lines');
-  list.textContent = '';
+  const holder = document.getElementById('session-lines');
+  holder.textContent = '';
+  const list = document.createElement('div');
+  list.className = 'list';
+  holder.append(list);
   for (const session of sessions) {
     const status = slotStatus(session);
     const line = document.createElement('button');
@@ -1334,20 +1349,24 @@ function dayTabs(schedule, holder, onPick) {
 }
 
 function drawSchedule(schedule, editable) {
-  const holder = document.getElementById(editable ? 'edit-day-tabs' : 'day-tabs');
-  dayTabs(schedule, holder, () => drawSchedule(schedule, editable));
+  const tabs = document.getElementById(editable ? 'edit-day-tabs' : 'day-tabs');
+  dayTabs(schedule, tabs, () => drawSchedule(schedule, editable));
 
-  const body = document.getElementById(editable ? 'schedule-edit-body' : 'schedule-body');
-  body.textContent = '';
+  const holder = document.getElementById(editable ? 'schedule-edit-body' : 'schedule-body');
+  holder.textContent = '';
+  const body = document.createElement('div');
+  body.className = 'list';
+  holder.append(body);
 
   const day = schedule.days.find((d) => d.day === openDay) || schedule.days[0];
   if (!day || !day.items.length) {
+    holder.textContent = '';
     const empty = document.createElement('p');
     empty.className = 'empty';
     empty.textContent = editable
       ? 'Nothing on this day yet. Add the first item below.'
       : 'Nothing listed for this day yet.';
-    body.append(empty);
+    holder.append(empty);
     return;
   }
 
@@ -1837,7 +1856,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=29').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=30').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

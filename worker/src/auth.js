@@ -4,7 +4,11 @@
 
 // 100,000 is the ceiling the Workers runtime allows.
 const PBKDF2_ITERATIONS = 100000;
-const TOKEN_HOURS = 12;
+// Long, on purpose: someone signs in once and stays signed in until they sign
+// out. Sessions are two months apart, so anything shorter means everyone
+// setting a PIN again at every session. A reset revokes the token regardless
+// of how long it had left.
+const TOKEN_DAYS = 400;
 
 const encoder = new TextEncoder();
 
@@ -94,7 +98,7 @@ export function pinProblem(pin) {
 export async function signToken(env, payload) {
   const body = {
     ...payload,
-    exp: Math.floor(Date.now() / 1000) + TOKEN_HOURS * 3600,
+    exp: Math.floor(Date.now() / 1000) + TOKEN_DAYS * 86400,
   };
   const claim =
     base64url(encoder.encode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))) +

@@ -104,10 +104,11 @@ Build the karyakar side first and well — it is the real product.
 - Every warning names its remedy, or isn't shown at all.
 - Keep `[hidden] { display: none !important }` in `app.css`. Any class that
   sets `display` beats the browser's own rule, and hiding then silently fails.
-- `docs/manifest.webmanifest` and the `theme-color` meta tag are the one place
-  colours are written out rather than referenced, because neither can read a
-  CSS variable. They duplicate navy and cream; change `tokens.css` and change
-  them too.
+- `docs/manifest.webmanifest`, the `theme-color` meta tag, and the small inline
+  style in the head are the only places colours are written out rather than
+  referenced: none of them can read a CSS variable, and the inline one has to
+  be there before any stylesheet loads or the first paint is white. They
+  duplicate the ground colour; change `tokens.css` and change them too.
 
 ## Secrets
 

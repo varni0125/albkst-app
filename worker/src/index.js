@@ -52,6 +52,12 @@ async function authenticate(request, env) {
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   const payload = await verifyToken(env, token);
   if (!payload) return null;
+
+  // The version the token was issued under must still be current. A PIN reset
+  // bumps it, which turns off every device already signed in as that person.
+  const version = await accountStore(env, payload.sub).tokenVersion();
+  if ((payload.v || 1) !== version) return null;
+
   return await lookupAccount(env, payload.sub);
 }
 
@@ -89,7 +95,7 @@ async function handleLogin(request, env) {
 
   await store.clearFailures();
   return json(env, {
-    token: await signToken(env, { sub: id, role: account.role }),
+    token: await signToken(env, { sub: id, role: account.role, v: await store.tokenVersion() }),
     account: { ...account, admin: await adminFlag(env, account) },
   });
 }
@@ -111,13 +117,14 @@ async function handleSetPin(request, env) {
   const account = await lookupAccount(env, id);
   if (!account) return fail(env, 401, BAD_CREDENTIALS);
 
-  const { alreadySet } = await accountStore(env, id).setPin(await hashPin(pin));
+  const store = accountStore(env, id);
+  const { alreadySet } = await store.setPin(await hashPin(pin));
   if (alreadySet) {
     return fail(env, 409, 'This ID already has a PIN. Ask a karyakar to reset it.');
   }
 
   return json(env, {
-    token: await signToken(env, { sub: id, role: account.role }),
+    token: await signToken(env, { sub: id, role: account.role, v: await store.tokenVersion() }),
     account: { ...account, admin: await adminFlag(env, account) },
   });
 }

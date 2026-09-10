@@ -22,6 +22,14 @@ export class Account extends DurableObject {
     };
   }
 
+  // Bumped whenever a PIN is reset. A token carries the version it was issued
+  // under, so resetting a PIN turns off every device already signed in as that
+  // person. Without it a long-lived session would outlive the reset, and a
+  // lost phone would stay signed in for as long as the token lasted.
+  async tokenVersion() {
+    return (await this.ctx.storage.get('tokenVersion')) || 1;
+  }
+
   async load() {
     const state = await this.#read();
     const locked = state.lockedUntil > Date.now();
@@ -43,7 +51,9 @@ export class Account extends DurableObject {
   }
 
   async resetPin() {
+    const version = ((await this.ctx.storage.get('tokenVersion')) || 1) + 1;
     await this.ctx.storage.delete(['pinHash', 'attempts', 'lastFailureAt', 'lockedUntil']);
+    await this.ctx.storage.put('tokenVersion', version);
   }
 
   // Failed attempts decay. Without this the count only ever climbs, so once

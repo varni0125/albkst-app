@@ -8,17 +8,32 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" />
-    <link rel="manifest" href="manifest.webmanifest?v=38" />
+    <link rel="manifest" href="manifest.webmanifest?v=39" />
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
     <meta name="theme-color" content="#101B2B" />
+    <!-- Inline, so the first paint is already on the app's ground. A
+         stylesheet arrives a moment later, and that moment is a white flash. -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #101B2B;
+      }
+    </style>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="BKST" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-    <link rel="stylesheet" href="tokens.css?v=38" />
-    <link rel="stylesheet" href="app.css?v=38" />
+    <link rel="stylesheet" href="tokens.css?v=39" />
+    <link rel="stylesheet" href="app.css?v=39" />
   </head>
-  <body>
+  <body class="booting">
+    <!-- Held up until the app knows who you are, so nobody sees the sign-in
+         screen flash past on their way to being already signed in. -->
+    <div class="splash" id="splash">
+      <img src="assets/kst-logo.png" alt="Kishore Sevak Training" />
+    </div>
+
     <main>
       <img class="logo" src="assets/kst-logo.png" alt="Kishore Sevak Training" />
 
@@ -214,7 +229,7 @@
 
     <nav class="tabs" id="tabs" hidden></nav>
 
-    <script src="qr.js?v=38"></script>
-    <script src="app.js?v=38"></script>
+    <script src="qr.js?v=39"></script>
+    <script src="app.js?v=39"></script>
   </body>
 </html>

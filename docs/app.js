@@ -2153,7 +2153,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=38').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=39').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -2165,15 +2165,33 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// The splash comes down once the app knows which screen it is showing, and
+// never before: the point of it is that nobody sees sign-in flash past on
+// their way to being already signed in.
+function ready() {
+  document.body.classList.remove('booting');
+  const splash = document.getElementById('splash');
+  if (!splash || splash.classList.contains('leaving')) return;
+  splash.classList.add('leaving');
+  // Removed only after it has finished fading, so it cannot swallow a tap.
+  setTimeout(() => splash.remove(), 400);
+}
+
 // A stored token is only a claim. The Worker re-checks it, and re-checks that
 // the account is still active, before anything is shown.
 (async function resume() {
-  if (!readToken()) return;
+  if (!readToken()) return ready();
   try {
     const { ok, body } = await call('/me');
     if (ok) landOn(body.account);
     else forgetToken();
   } catch {
+    // Offline with a token in hand: the sign-in screen is the honest answer,
+    // since nothing can be confirmed.
     forgetToken();
   }
+  ready();
 })();
+
+// Never leave someone looking at a logo because a request hung.
+setTimeout(ready, 6000);

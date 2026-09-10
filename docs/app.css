@@ -1171,3 +1171,48 @@ select {
 #detail-remove {
   margin-left: var(--gap-2);
 }
+
+/* The splash.
+   The page is on the app's own ground from the first paint, so there is no
+   white flash before the stylesheet takes hold, and the sign-in screen is not
+   shown to someone who turns out to be already signed in. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: var(--color-surface);
+  transition: opacity 320ms ease;
+}
+
+.splash img {
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+  animation: settle-in 500ms ease-out both;
+}
+
+@keyframes settle-in {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Faded rather than removed, so the screen beneath is already drawn when it
+   goes: a swap would show one frame of an empty page. */
+.splash.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.booting main,
+body.booting .tabs {
+  opacity: 0;
+}
+
+main,
+.tabs {
+  transition: opacity 240ms ease;
+}

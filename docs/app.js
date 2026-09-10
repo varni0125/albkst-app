@@ -268,8 +268,10 @@ function setBadge(key, count) {
   const button = tabBar.querySelector(`button[data-tab="${key}"]`);
   if (!button) return;
   const badge = button.querySelector('.tab-badge');
-  badge.textContent = count;
-  badge.hidden = !count;
+  // Emptied as well as hidden. A badge with no number in it is a small red
+  // dot, which is exactly the kind of thing that appears from nowhere.
+  badge.textContent = count > 0 ? String(count) : '';
+  badge.hidden = !(count > 0);
 }
 
 /* ---------- karyakar: sessions ---------- */
@@ -1056,9 +1058,12 @@ function renderStanding(standing) {
 function renderRequest(session) {
   const holder = document.getElementById('next-request');
   holder.textContent = '';
-  holder.className = 'request-state';
+  // Only a panel once there is something in it: the class carries a top
+  // border, and an empty one draws a line across the card for no reason.
+  holder.className = '';
 
   if (session.request && session.request.state === 'pending') {
+    holder.className = 'request-state';
     holder.innerHTML =
       '<p>Absence requested. Waiting on a karyakar.</p>' +
       `<blockquote>${escape(session.request.reason)}</blockquote>`;
@@ -1071,11 +1076,9 @@ function renderRequest(session) {
     return;
   }
 
-  if (!session.canRequest) {
-    holder.className = '';
-    return;
-  }
+  if (!session.canRequest) return;
 
+  holder.className = 'request-state';
   const open = document.createElement('button');
   open.className = 'linkish';
   open.type = 'button';
@@ -1834,7 +1837,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=28').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=29').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

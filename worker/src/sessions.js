@@ -111,21 +111,28 @@ async function reconcile(env) {
 // spends the allowance. Computed on read rather than trusted from the sheet,
 // because it is the highest-stakes number in the app and a stored copy goes
 // stale the moment a karyakar changes a mark.
-function absenceCounts(latest) {
+// Only sessions that still exist. An attendance row whose session has been
+// deleted would otherwise keep counting against someone for the rest of the
+// year, and the roster and the delegate's own screen would disagree about how
+// many absences they had.
+function absenceCounts(latest, known) {
   const counts = new Map();
   for (const row of latest.values()) {
     if (row.status !== 'absent') continue;
+    if (known && !known.has(row.session_id)) continue;
     counts.set(row.bk_id, (counts.get(row.bk_id) || 0) + 1);
   }
   return counts;
 }
 
 export async function rosterFor(env, sessionId) {
-  const [delegates, latest, waiting] = await Promise.all([
+  const [delegates, latest, waiting, sessionRows] = await Promise.all([
     readTab(env, 'delegates'),
     reconcile(env),
     checkinBuffer(env, sessionId).pending(),
+    readTab(env, 'sessions'),
   ]);
+  const known = new Set(sessionRows.map((row) => row.session_id).filter(Boolean));
 
   // Anyone whose check-in is buffered but not yet in the Sheet still counts as
   // present, so a karyakar watching the count never sees it lag the room.
@@ -134,7 +141,7 @@ export async function rosterFor(env, sessionId) {
     const held = latest.get(key);
     if (!held || String(row.marked_at) >= String(held.marked_at)) latest.set(key, row);
   }
-  const counts = absenceCounts(latest);
+  const counts = absenceCounts(latest, known);
 
   const people = delegates
     .filter((row) => row.bk_id && isTrue(row.active))
@@ -318,6 +325,21 @@ export async function standingFor(env, bkId) {
   ]);
   const today = todayLocal();
 
+  // The window state from the durable object, not from the cached sheet. A
+  // delegate whose check-in button appears a minute after a karyakar opened
+  // the window is the same bug that refused twenty-three of thirty check-ins,
+  // just on the read side.
+  const live = new Map(
+    await Promise.all(
+      sessionRows
+        .filter((row) => row.session_id)
+        .map(async (row) => [
+          row.session_id,
+          await checkinBuffer(env, row.session_id).windowState(),
+        ])
+    )
+  );
+
   const sessions = sessionRows
     .filter((row) => row.session_id)
     .sort((a, b) => String(a.session_date).localeCompare(String(b.session_date)))
@@ -327,23 +349,26 @@ export async function standingFor(env, bkId) {
       const ended = hasEnded(row);
       const request = requestState(myRequests, row.session_id);
       const started = Boolean(row.session_date) && today >= row.session_date;
-      const live = request && request.state !== 'cancelled' ? request : null;
+      const pending = request && request.state !== 'cancelled' ? request : null;
+      const state = live.get(row.session_id) || row.checkin_state;
 
       return {
         ...publicSession(row),
+        checkinState: state,
+        checkinOpen: state === 'open',
         status,
         ended,
         daysAway: daysUntil(row.session_date, today),
         absenceOutcome: record ? record.absence_outcome : '',
         // Section 6: a denial states its reason, and the delegate is shown it.
-        decisionNote: record ? record.decision_note : (live ? live.decision_note : ''),
-        request: live
-          ? { state: live.state, reason: live.reason, note: live.decision_note }
+        decisionNote: record ? record.decision_note : (pending ? pending.decision_note : ''),
+        request: pending
+          ? { state: pending.state, reason: pending.reason, note: pending.decision_note }
           : null,
         // Requests close when the session begins, and there is nothing to ask
         // about once you are already marked.
-        canRequest: !started && !live && status === 'not_checked_in',
-        canCheckIn: row.checkin_state === 'open' && !ended && status !== 'present',
+        canRequest: !started && !pending && status === 'not_checked_in',
+        canCheckIn: state === 'open' && !ended && status !== 'present',
       };
     });
 

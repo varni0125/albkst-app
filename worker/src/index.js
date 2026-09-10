@@ -227,7 +227,7 @@ export default {
           const denied = karyakarOnly();
           if (denied) return denied;
           return json(env, {
-            session: (await listSessions(env)).find((s) => s.id === session.session_id),
+            session: (await listSessions(env, true)).find((s) => s.id === session.session_id),
             roster: await rosterFor(env, session.session_id),
           });
         }
@@ -242,7 +242,7 @@ export default {
           if (state === 'closed') {
             const result = await closeWindow(env, session, account.id);
             return json(env, {
-              session: (await listSessions(env)).find((s) => s.id === session.session_id),
+              session: (await listSessions(env, true)).find((s) => s.id === session.session_id),
               roster: await rosterFor(env, session.session_id),
               markedAbsent: result.markedAbsent,
             });

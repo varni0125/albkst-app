@@ -1,5 +1,19 @@
-/* Login screen.
-   Every colour here comes from tokens.css. No hex values in this file. */
+/* BKST.
+   Every colour comes from tokens.css. No hex values in this file.
+
+   Spacing is a scale, not a guess: 4, 8, 12, 16, 22, 30. Anything that needs a
+   number in between is a sign the layout is wrong rather than the number. */
+
+:root {
+  --gap-1: 4px;
+  --gap-2: 8px;
+  --gap-3: 12px;
+  --gap-4: 16px;
+  --gap-5: 22px;
+  --gap-6: 30px;
+  --radius: 12px;
+  --pill: 999px;
+}
 
 *,
 *::before,
@@ -13,10 +27,9 @@ html {
   touch-action: manipulation;
 }
 
-/* The hidden attribute must win. Any rule that sets display - and both the
-   account bar and the tab bar do - otherwise beats the browser's own
-   [hidden] { display: none } on specificity, and hiding an element quietly
-   does nothing. */
+/* The hidden attribute must win. Any rule that sets display would otherwise
+   beat the browser's own [hidden] { display: none } on specificity, and hiding
+   an element quietly does nothing. */
 [hidden] {
   display: none !important;
 }
@@ -25,32 +38,35 @@ body {
   margin: 0;
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 32px 20px 64px;
+  padding: var(--gap-6) 20px 64px;
   background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.has-tabs {
+  padding-bottom: 96px;
+}
+
+body.dialog-open {
+  overflow: hidden;
 }
 
 main {
   width: 100%;
-  max-width: 380px;
+  max-width: 400px;
 }
 
-.logo {
-  display: block;
-  width: 100%;
-  max-width: 260px;
-  height: auto;
-  margin: 0 auto 40px;
-}
+/* ---------- type ---------- */
 
 h1 {
-  margin: 0 0 8px;
+  margin: 0 0 var(--gap-2);
   font-family: var(--font-serif);
   font-size: 33px;
   font-weight: 600;
@@ -58,32 +74,149 @@ h1 {
   letter-spacing: -0.02em;
 }
 
+h2 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+}
+
 .lede {
-  margin: 0 0 28px;
+  margin: 0 0 var(--gap-5);
   color: var(--color-text-muted);
   font-size: 15px;
 }
 
+.hint {
+  margin: var(--gap-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.empty {
+  padding: var(--gap-5) 0;
+  color: var(--color-text-muted);
+  font-size: 15px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.logo {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  height: auto;
+  margin: 0 auto var(--gap-6);
+}
+
+footer {
+  margin-top: var(--gap-6);
+  padding-top: var(--gap-5);
+  border-top: 1px solid var(--color-hairline);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ---------- controls ---------- */
+
+/* The one action-coloured element on a screen. */
+button {
+  width: 100%;
+  margin-top: var(--gap-3);
+  padding: 13px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-action);
+  color: var(--color-action-text);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms ease, opacity 140ms ease;
+}
+
+button:disabled {
+  background: var(--color-muted-surface);
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+button:active:not(:disabled) {
+  opacity: 0.8;
+}
+
+/* Every quiet action is a pill. Underlined text is hard to hit accurately and
+   reads as a footnote rather than as something you press. Outlined, so the one
+   filled button on a screen stays the only action-coloured element. */
+.linkish,
+button.quiet {
+  display: inline-block;
+  width: auto;
+  margin: var(--gap-3) 0 0;
+  padding: 9px 16px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--pill);
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+button.quiet {
+  background: var(--color-raised);
+  color: var(--color-text);
+  padding: 11px 18px;
+  font-size: 15px;
+}
+
+.linkish:active,
+button.quiet:active {
+  background: var(--color-muted-surface);
+}
+
+.back {
+  display: inline-block;
+  margin: 0 0 var(--gap-4);
+}
+
+/* ---------- fields ---------- */
+
 .field {
-  margin-bottom: 18px;
+  margin-bottom: var(--gap-4);
 }
 
 label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: var(--gap-1);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
-input {
+input,
+textarea {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding: 12px 14px;
   border: 1px solid var(--color-hairline);
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: var(--color-text);
   font-family: inherit;
   font-size: 17px;
+  text-align: left;
+}
+
+textarea {
+  font-size: 15px;
+  resize: vertical;
 }
 
 input:focus,
@@ -93,53 +226,95 @@ textarea:focus {
   border-color: var(--color-action);
 }
 
-/* Digits only, and wide enough to read back at a glance. */
 input[inputmode='numeric'] {
   letter-spacing: 0.35em;
 }
 
-.hint {
-  margin: 6px 0 0;
+input[type='time'] {
+  min-height: 46px;
+  padding: 11px 8px;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+input[type='time']::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.5;
+}
+
+.pin-wrap {
+  position: relative;
+}
+
+.pin-wrap input {
+  padding-right: 48px;
+}
+
+.reveal {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  transform: translateY(-50%);
+  border: none;
+  border-radius: var(--gap-1);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.reveal svg {
+  display: block;
+  margin: 0 auto;
+}
+
+/* ---------- signed-in chrome ---------- */
+
+.account-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-3);
+  margin-bottom: var(--gap-5);
+  padding-bottom: var(--gap-3);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.account-bar .linkish {
+  margin: 0;
+  flex: none;
+}
+
+.greeting {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 18px;
+}
+
+.account-role {
+  margin: 2px 0 0;
   color: var(--color-text-muted);
   font-size: 13px;
 }
 
-/* The one action-coloured element on the screen. */
-button {
-  width: 100%;
-  margin-top: 10px;
-  padding: 13px 16px;
-  border: none;
-  border-radius: 6px;
-  background: var(--color-action);
-  color: var(--color-action-text);
-  font-family: inherit;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-button:disabled {
-  background: var(--color-muted-surface);
-  color: var(--color-text-muted);
-  cursor: default;
-}
-
-/* A toast, pinned to the viewport. In the page flow a confirmation could
-   appear above a roster someone had scrolled well past, and go unread. */
+/* A toast, pinned to the viewport. In the page flow a confirmation could sit
+   above a roster someone had scrolled past, and go unread. */
 .message {
   position: fixed;
-  background: var(--color-raised);
-  top: 12px;
+  top: var(--gap-3);
   left: 50%;
-  z-index: 20;
+  z-index: 40;
   width: calc(100% - 24px);
   max-width: 380px;
   margin: 0;
-  padding: 12px 14px;
+  padding: var(--gap-3) var(--gap-4);
   transform: translateX(-50%);
   border: 1px solid var(--color-hairline);
-  border-radius: 8px;
+  border-radius: var(--radius);
+  background: var(--color-raised);
   font-size: 14px;
   text-align: center;
 }
@@ -159,127 +334,89 @@ button:disabled {
   color: var(--color-green-text);
 }
 
-.signed-in dt {
-  margin-bottom: 2px;
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
+/* ---------- tabs ---------- */
 
-.signed-in dd {
-  margin: 0 0 16px;
-  font-family: var(--font-serif);
-  font-size: 20px;
-}
-
-/* Every quiet action is a pill. Underlined text is hard to hit accurately and
-   reads as a footnote; a pill reads as something you press. The one filled
-   button on a screen stays the only action-coloured element. */
-.linkish {
-  display: inline-block;
-  width: auto;
-  margin: 10px 0 0;
-  padding: 9px 16px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 999px;
-  background: none;
-  color: var(--color-text-muted);
-  font-size: 14px;
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.linkish:active {
-  background: var(--color-muted-surface);
-}
-
-footer {
-  margin-top: 36px;
-  padding-top: 20px;
-  border-top: 1px solid var(--color-hairline);
-  color: var(--color-text-muted);
-  font-size: 13px;
-  text-align: center;
-}
-
-
-/* Signed-in chrome */
-.account-bar {
+.tabs {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 15;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 24px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-hairline);
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--color-hairline);
+  background: var(--color-surface);
 }
 
-.greeting {
+.tabs button {
+  flex: 1;
   margin: 0;
-  font-family: var(--font-serif);
-  font-size: 18px;
-}
-
-.account-role {
-  margin: 2px 0 0;
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
-.back {
-  display: inline-block;
-  margin: 0 0 16px;
-}
-
-/* Reveal control on a PIN field */
-.pin-wrap {
-  position: relative;
-}
-
-.pin-wrap input {
-  padding-right: 48px;
-}
-
-.reveal {
-  position: absolute;
-  top: 50%;
-  right: 6px;
-  width: 36px;
-  height: 36px;
-  margin: 0;
-  padding: 0;
-  transform: translateY(-50%);
-  border-radius: 4px;
+  padding: 9px 2px 11px;
+  border: none;
+  border-radius: 0;
   background: none;
   color: var(--color-text-muted);
-  cursor: pointer;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
-.reveal svg {
+/* The dark ink belongs to the icon inside the pill and to nothing else: on the
+   button it would take the label with it, dark on a dark ground. */
+.tabs button[aria-current='page'] {
+  color: var(--color-text);
+}
+
+.tabs button[aria-current='page'] .tab-pill {
+  background: var(--color-action);
+  color: var(--color-action-text);
+}
+
+.tab-pill {
+  display: block;
+  width: 40px;
+  padding: var(--gap-1) 0;
+  margin: 0 auto var(--gap-1);
+  border-radius: var(--pill);
+}
+
+.tabs svg {
   display: block;
   margin: 0 auto;
 }
 
-/* Session cards */
+.tab-badge {
+  display: inline-block;
+  min-width: 17px;
+  margin-left: var(--gap-1);
+  padding: 1px 5px;
+  border-radius: var(--pill);
+  background: var(--color-red-bg);
+  color: var(--color-red-text);
+  font-size: 10px;
+}
+
+/* ---------- cards ---------- */
+
 .session-card {
   display: block;
   width: 100%;
-  margin-bottom: 12px;
+  margin: 0 0 var(--gap-3);
   padding: 18px;
   border: 1px solid var(--color-hairline);
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: var(--color-raised);
   color: inherit;
   font-family: inherit;
   font-size: inherit;
   text-align: left;
   cursor: pointer;
+  transition: background-color 180ms ease;
 }
 
 .session-card h2 {
-  margin: 0 0 4px;
-  font-family: var(--font-serif);
+  margin: 0 0 var(--gap-1);
   font-size: 19px;
-  font-weight: 600;
 }
 
 .session-card p {
@@ -288,43 +425,111 @@ footer {
   font-size: 14px;
 }
 
-/* Check-in window */
-.window-panel {
-  margin: 24px 0 20px;
+.window-panel,
+.next-card,
+.request-card {
+  margin: 0 0 var(--gap-5);
   padding: 18px;
   border: 1px solid var(--color-hairline);
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: var(--color-raised);
 }
 
+.window-panel {
+  margin-top: var(--gap-5);
+}
+
 .window-state {
-  margin: 0 0 12px;
+  margin: 0 0 var(--gap-3);
   font-weight: 600;
 }
 
-.window-panel button {
-  margin: 0;
+.window-panel button,
+.next-card button,
+.request-card button {
+  margin-top: 0;
 }
 
-.window-panel .hint {
-  margin-top: 10px;
+.window-panel .hint,
+.next-card .hint {
+  margin-top: var(--gap-3);
 }
 
-.tally {
-  margin: 0 0 18px;
+/* ---------- the check-in code ---------- */
+
+.qr-panel {
+  margin-bottom: var(--gap-5);
+}
+
+#qr-holder {
+  margin-top: var(--gap-4);
+  text-align: center;
+}
+
+#qr-image {
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.qr-countdown {
+  margin: var(--gap-3) 0 0;
   font-family: var(--font-serif);
-  font-size: 20px;
+  font-size: 18px;
 }
 
-/* Roster */
-.center-group {
-  margin-bottom: 26px;
+.qr-countdown[data-expired='true'] {
+  color: var(--color-red-text);
 }
 
-.center-head {
+/* ---------- stat tiles ---------- */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap-2);
+  margin: 0 0 var(--gap-5);
+}
+
+.tile {
+  padding: 14px var(--gap-2);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius);
+  background: var(--color-raised);
+  text-align: center;
+}
+
+.tile-number {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.tile-label {
+  display: block;
+  margin-top: 5px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.tile[data-tone='good'] .tile-number {
+  color: var(--color-green-text);
+}
+
+.tile[data-tone='bad'] .tile-number {
+  color: var(--color-red-text);
+}
+
+/* ---------- people ---------- */
+
+.center-head,
+.section-head {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin: 0 0 var(--gap-2);
   padding-bottom: 6px;
   border-bottom: 1px solid var(--color-hairline);
   font-size: 13px;
@@ -334,17 +539,28 @@ footer {
   color: var(--color-text-muted);
 }
 
+.section-head {
+  margin-top: var(--gap-6);
+}
+
+.center-group {
+  margin-bottom: var(--gap-6);
+}
+
 .person {
   border-bottom: 1px solid var(--color-hairline);
 }
 
-.person-row {
+.person-row,
+.person-link {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 12px;
-  padding: 12px 2px;
+  gap: var(--gap-3);
+  margin: 0;
+  padding: var(--gap-3) 2px;
   border: none;
+  border-radius: 0;
   background: none;
   color: inherit;
   font-family: inherit;
@@ -353,23 +569,47 @@ footer {
   cursor: pointer;
 }
 
+.person-link {
+  border-bottom: 1px solid var(--color-hairline);
+}
+
 .person-name {
   flex: 1;
+  min-width: 0;
   font-family: var(--font-serif);
   font-size: 17px;
 }
 
 .person-meta {
+  flex: none;
   color: var(--color-text-muted);
   font-size: 13px;
 }
 
-.chip {
-  padding: 3px 9px;
-  border-radius: 999px;
+/* No photographs, and there never will be any. */
+.initials {
+  display: inline-flex;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--pill);
+  background: var(--color-navy);
+  color: var(--color-text);
   font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.chip {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: var(--pill);
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 
 .chip[data-status='present'] {
@@ -394,25 +634,30 @@ footer {
 
 /* Actions revealed under a tapped name */
 .person-actions {
-  padding: 4px 2px 16px;
+  padding: 0 2px var(--gap-4);
+  animation: lift 160ms ease-out;
 }
 
 .person-actions p {
-  margin: 0 0 10px;
+  margin: 0 0 var(--gap-3);
   color: var(--color-text-muted);
   font-size: 13px;
 }
 
+.person-actions textarea {
+  margin-top: var(--gap-3);
+}
+
 .action-row {
   display: flex;
-  gap: 8px;
+  gap: var(--gap-2);
 }
 
 .action-row button {
   margin: 0;
   padding: 11px 14px;
   border: 1px solid var(--color-hairline);
-  border-radius: 999px;
+  border-radius: var(--pill);
   background: none;
   color: var(--color-text);
   font-size: 14px;
@@ -431,40 +676,104 @@ footer {
   color: var(--color-green-text);
 }
 
-.person-actions textarea {
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 6px;
-  background: none;
-  color: var(--color-text);
-  font-family: inherit;
-  font-size: 15px;
-  resize: vertical;
+/* ---------- records, requests ---------- */
+
+.record,
+.session-line {
+  padding: var(--gap-4) 2px;
+  border-bottom: 1px solid var(--color-hairline);
 }
 
-/* Delegate: their own year */
+.record-head,
+.session-line-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gap-2);
+}
+
+.record-head h2,
+.session-line h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.record p,
+.session-line p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.session-line-link {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: var(--gap-4) 2px;
+  border: none;
+  border-bottom: 1px solid var(--color-hairline);
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.decision {
+  margin-top: var(--gap-2);
+  padding: 10px var(--gap-3);
+  border-radius: 8px;
+  background: var(--color-red-bg);
+  color: var(--color-red-text);
+  font-size: 14px;
+}
+
+.request-card h2 {
+  margin: 0 0 2px;
+  font-size: 18px;
+}
+
+.request-card .when {
+  margin: 0 0 var(--gap-3);
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.request-card blockquote {
+  margin: 0 0 var(--gap-4);
+  padding-left: var(--gap-3);
+  border-left: 2px solid var(--color-hairline);
+  font-family: var(--font-serif);
+  font-size: 16px;
+}
+
+.request-card textarea {
+  margin-bottom: var(--gap-3);
+}
+
+/* ---------- delegate: their year ---------- */
+
 .allowance {
-  margin: 0 0 22px;
+  display: inline-block;
+  margin: 0 0 var(--gap-5);
   font-size: 15px;
   color: var(--color-text-muted);
 }
 
 .allowance[data-spent='true'] {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 6px var(--gap-3);
+  border-radius: 8px;
   background: var(--color-gold-bg);
   color: var(--color-gold-text);
 }
 
-.next-card {
-  margin-bottom: 26px;
-  padding: 20px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 12px;
-  background: var(--color-raised);
+.next-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gap-2);
 }
 
 .next-when {
@@ -473,34 +782,53 @@ footer {
   font-size: 22px;
 }
 
+.next-countdown {
+  margin: 0;
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
 .next-where {
-  margin: 0 0 14px;
+  margin: 0 0 var(--gap-4);
   color: var(--color-text-muted);
   font-size: 14px;
 }
 
-.next-card button {
-  margin: 0;
+.request-state {
+  margin-top: var(--gap-4);
+  padding-top: var(--gap-4);
+  border-top: 1px solid var(--color-hairline);
 }
 
-.next-card .hint {
-  margin-top: 12px;
+.request-state p {
+  margin: 0 0 var(--gap-2);
+  font-size: 14px;
+}
+
+.request-state blockquote {
+  margin: 0 0 var(--gap-3);
+  padding-left: var(--gap-3);
+  border-left: 2px solid var(--color-hairline);
+  font-family: var(--font-serif);
 }
 
 /* The year at a glance */
 .slots {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 26px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0 0 var(--gap-6);
 }
 
 .slot {
-  flex: 1;
-  padding: 10px 4px;
+  padding: 10px 2px;
   border: 1px solid var(--color-hairline);
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 8px;
+  font-size: 11px;
   text-align: center;
+  transition: background-color 180ms ease;
 }
 
 .slot[data-status='present'] {
@@ -522,332 +850,221 @@ footer {
 }
 
 .slot[data-status='unscheduled'] {
-  color: var(--color-text-muted);
   border-style: dashed;
-}
-
-.session-line {
-  padding: 14px 2px;
-  border-bottom: 1px solid var(--color-hairline);
-}
-
-.session-line-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.session-line h2 {
-  margin: 0;
-  font-family: var(--font-serif);
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.session-line p {
-  margin: 6px 0 0;
   color: var(--color-text-muted);
-  font-size: 14px;
 }
 
-.session-line .decision {
-  margin-top: 8px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  background: var(--color-red-bg);
-  color: var(--color-red-text);
-  font-size: 14px;
+/* ---------- the programme ---------- */
+
+.day-tabs {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin: 0 0 var(--gap-5);
 }
 
-/* Check-in code */
-.qr-panel {
-  margin-bottom: 24px;
-}
-
-.qr-panel button.quiet,
-button.quiet {
+.day-tabs button {
   margin: 0;
+  padding: 10px var(--gap-1);
   border: 1px solid var(--color-hairline);
-  border-radius: 999px;
+  border-radius: var(--pill);
   background: var(--color-raised);
-  color: var(--color-text);
-  font-weight: 500;
-}
-
-#qr-holder {
-  margin-top: 16px;
-  text-align: center;
-}
-
-#qr-image {
-  width: 100%;
-  max-width: 260px;
-  height: auto;
-  image-rendering: pixelated;
-}
-
-.qr-countdown {
-  margin: 10px 0 0;
-  font-family: var(--font-serif);
-  font-size: 18px;
-}
-
-.qr-countdown[data-expired='true'] {
-  color: var(--color-red-text);
-}
-
-#qr-save {
-  margin-top: 12px;
-  cursor: pointer;
-}
-
-/* Tab bar. Fixed to the bottom, where a thumb is. */
-.tabs {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 15;
-  display: flex;
-  padding-bottom: env(safe-area-inset-bottom);
-  border-top: 1px solid var(--color-hairline);
-  background: var(--color-surface);
-}
-
-.tabs button {
-  flex: 1;
-  margin: 0;
-  padding: 10px 4px 12px;
-  border: none;
-  border-radius: 0;
-  background: none;
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* A filled pill behind the tab you are on, rather than a colour change alone.
-   Reads at a glance without needing a shadow.
-
-   The dark ink belongs to the icon inside the pill and to nothing else: put it
-   on the button and the label underneath goes dark on a dark ground and
-   disappears. */
-.tabs button[aria-current='page'] {
-  color: var(--color-text);
-}
-
-.tabs button[aria-current='page'] .tab-pill {
+.day-tabs button[aria-current='page'] {
+  border-color: var(--color-action);
   background: var(--color-action);
   color: var(--color-action-text);
 }
 
-.tab-pill {
-  display: block;
-  width: 44px;
-  margin: 0 auto 4px;
-  padding: 5px 0;
-  border-radius: 999px;
+.session-picker {
+  margin-bottom: var(--gap-3);
 }
 
-.tabs svg {
-  display: block;
-  margin: 0 auto 3px;
+.session-picker button {
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.tab-badge {
-  display: inline-block;
-  min-width: 17px;
-  margin-left: 4px;
-  padding: 1px 5px;
-  border-radius: 999px;
-  background: var(--color-red-bg);
-  color: var(--color-red-text);
-  font-size: 10px;
-}
-
-body.has-tabs {
-  padding-bottom: 96px;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-/* Directory */
-.person-link {
+.slot-row {
   display: flex;
-  width: 100%;
-  align-items: baseline;
-  gap: 10px;
-  padding: 12px 2px;
-  border: none;
-  border-bottom: 1px solid var(--color-hairline);
-  border-radius: 0;
-  background: none;
-  color: inherit;
-  font-family: inherit;
-  font-size: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.person-link .person-name {
-  flex: 1;
-}
-
-/* Delegate detail and dashboard cards */
-.record {
-  padding: 14px 2px;
+  gap: var(--gap-3);
+  padding: var(--gap-3) 2px;
   border-bottom: 1px solid var(--color-hairline);
 }
 
-.record-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.record-head h2 {
-  margin: 0;
-  font-family: var(--font-serif);
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.record p {
-  margin: 6px 0 0;
+.slot-time {
+  flex: none;
+  width: 76px;
+  padding-top: 1px;
   color: var(--color-text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.slot-what {
+  flex: 1;
+  min-width: 0;
+}
+
+.slot-what h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.slot-what p {
+  margin: 3px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+/* A meal is the same kind of thing as everything else, marked so it can be
+   picked out at a glance. Gold, which section 9 keeps for worth-a-word. */
+.slot-row[data-meal='true'] .slot-what h2,
+.slot-row[data-meal='true'] .slot-time {
+  color: var(--color-gold-text);
+}
+
+.slot-what .menu {
+  margin-top: 5px;
+  color: var(--color-gold-text);
   font-size: 14px;
 }
 
-.request-card {
-  margin-bottom: 14px;
+.slot-edit {
+  display: inline-block;
+  width: auto;
+  margin: var(--gap-2) var(--gap-2) 0 0;
+  padding: 6px 14px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--pill);
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ---------- dialog ---------- */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--color-scrim);
+}
+
+.schedule-form {
+  width: 100%;
+  max-width: 400px;
+  max-height: 84vh;
+  overflow-y: auto;
   padding: 18px;
   border: 1px solid var(--color-hairline);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--color-raised);
 }
 
-.request-card h2 {
-  margin: 0 0 2px;
-  font-family: var(--font-serif);
-  font-size: 18px;
-  font-weight: 600;
+.schedule-form h2 {
+  margin: 0 0 var(--gap-3);
+  font-size: 21px;
 }
 
-.request-card .when {
-  margin: 0 0 10px;
-  color: var(--color-text-muted);
-  font-size: 14px;
+.schedule-form .lede {
+  margin-bottom: var(--gap-3);
 }
 
-.request-card blockquote {
-  margin: 0 0 14px;
-  padding-left: 12px;
-  border-left: 2px solid var(--color-hairline);
-  font-family: var(--font-serif);
-  font-size: 16px;
+.schedule-form .field {
+  margin-bottom: var(--gap-3);
 }
 
-.section-head {
+.schedule-form label {
+  margin-bottom: var(--gap-1);
+}
+
+.schedule-form input,
+.schedule-form textarea {
+  padding: 9px 12px;
+}
+
+/* Grid, not flex. A native time input carries an intrinsic width from its own
+   shadow DOM, and a flex item will overflow to honour it. A minmax(0, 1fr)
+   track cannot: the column is the width, whatever the content asks for. */
+.schedule-form .pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--gap-3);
+}
+
+.schedule-form .pair .field {
+  min-width: 0;
+}
+
+.checkline {
   display: flex;
-  justify-content: space-between;
-  margin: 26px 0 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--color-hairline);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.empty {
-  padding: 20px 0;
-  color: var(--color-text-muted);
-  font-size: 15px;
-}
-
-/* Delegate: next session */
-.next-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: flex-start;
   gap: 10px;
-}
-
-.next-countdown {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.request-state {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--color-hairline);
-}
-
-.request-state p {
-  margin: 0 0 8px;
-  font-size: 14px;
-}
-
-.request-state textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 6px;
-  background: none;
-  color: var(--color-text);
-  font-family: inherit;
+  margin: 2px 0 var(--gap-3);
   font-size: 15px;
-  resize: vertical;
 }
 
-.session-line-link {
-  display: block;
+.checkline input[type='checkbox'] {
+  flex: none;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+}
+
+/* Two pills side by side, far enough apart that neither is hit by accident. */
+.dialog-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  margin-top: var(--gap-3);
+}
+
+.dialog-actions button {
   width: 100%;
-  padding: 14px 2px;
-  border: none;
-  border-bottom: 1px solid var(--color-hairline);
-  border-radius: 0;
+  margin: 0;
+  padding: var(--gap-3) 10px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--pill);
   background: none;
-  color: inherit;
-  font-family: inherit;
-  font-size: inherit;
-  text-align: left;
-  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 15px;
+  font-weight: 500;
 }
 
-
-/* Motion.
-   Restrained on purpose: this app tells people whether they are still in the
-   programme, so it acknowledges a change rather than celebrating it. All of
-   it is switched off for anyone who asks for less movement. */
-
-.chip,
-.slot,
-.person-row,
-.session-card {
-  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+.dialog-actions button[data-kind='danger'] {
+  border-color: var(--color-red-bg);
+  background: var(--color-red-bg);
+  color: var(--color-red-text);
 }
 
+.schedule-form .linkish {
+  margin-top: var(--gap-3);
+}
+
+/* ---------- motion ---------- */
+
+/* Restrained on purpose: this app tells people whether they are still in the
+   programme, so it acknowledges a change rather than celebrating it. */
 @keyframes settle {
   0% { transform: translateY(-2px); opacity: 0.4; }
   100% { transform: translateY(0); opacity: 1; }
-}
-
-.chip.just-changed {
-  animation: settle 260ms ease-out;
 }
 
 @keyframes lift {
@@ -855,37 +1072,29 @@ body.has-tabs {
   100% { opacity: 1; transform: translateY(0); }
 }
 
-.message:not([hidden]) {
-  animation: lift 200ms ease-out;
-}
-
-.person-actions {
-  animation: lift 160ms ease-out;
-}
-
-button {
-  transition: background-color 140ms ease, opacity 140ms ease;
-}
-
-button:active:not(:disabled) {
-  opacity: 0.8;
-}
-
-/* Loading. A pulse rather than a sweep: a shimmer is a gradient, and the
-   spec asks for none. */
 @keyframes breathe {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
 }
 
+.chip.just-changed {
+  animation: settle 260ms ease-out;
+}
+
+.message:not([hidden]) {
+  animation: lift 200ms ease-out;
+}
+
+/* Loading. A pulse rather than a sweep: a shimmer is a gradient, and the spec
+   asks for none. */
 .skeleton {
   animation: breathe 1.4s ease-in-out infinite;
 }
 
 .skeleton-line {
   height: 14px;
-  margin: 14px 0;
-  border-radius: 4px;
+  margin: var(--gap-4) 0;
+  border-radius: var(--gap-1);
   background: var(--color-muted-surface);
 }
 
@@ -905,386 +1114,4 @@ button:active:not(:disabled) {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-}
-
-
-/* Stat tiles. One line of text said "12 of 25 checked in"; three numbers can
-   be read across a room, which is where a karyakar is standing. */
-.tiles {
-  display: flex;
-  gap: 8px;
-  margin: 0 0 22px;
-}
-
-.tile {
-  flex: 1;
-  padding: 14px 8px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 12px;
-  background: var(--color-raised);
-  text-align: center;
-}
-
-.tile-number {
-  display: block;
-  font-family: var(--font-serif);
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.tile-label {
-  display: block;
-  margin-top: 5px;
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-
-.tile[data-tone='good'] .tile-number { color: var(--color-green-text); }
-.tile[data-tone='bad'] .tile-number { color: var(--color-red-text); }
-
-/* Initials, because there are no photographs and never will be. Gives the
-   roster a rhythm to scan down. */
-.initials {
-  display: inline-flex;
-  flex: none;
-  width: 34px;
-  height: 34px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: var(--color-navy);
-  color: var(--color-text);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-}
-
-.person-row,
-.person-link {
-  align-items: center;
-}
-
-/* The programme */
-.day-tabs {
-  display: flex;
-  gap: 6px;
-  margin: 0 0 20px;
-}
-
-.day-tabs button {
-  flex: 1;
-  margin: 0;
-  padding: 10px 4px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 999px;
-  background: var(--color-raised);
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.day-tabs button[aria-current='page'] {
-  border-color: var(--color-action);
-  background: var(--color-action);
-  color: var(--color-action-text);
-}
-
-.slot-row {
-  display: flex;
-  gap: 14px;
-  padding: 13px 2px;
-  border-bottom: 1px solid var(--color-hairline);
-}
-
-.slot-time {
-  flex: none;
-  width: 74px;
-  padding-top: 1px;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-
-.slot-what {
-  flex: 1;
-}
-
-.slot-what h2 {
-  margin: 0;
-  font-family: var(--font-serif);
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.slot-what p {
-  margin: 3px 0 0;
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
-/* A meal is the same kind of thing as everything else, marked so it can be
-   picked out at a glance. Gold, which section 9 keeps for worth-a-word. */
-.slot-row[data-meal='true'] .slot-what h2 {
-  color: var(--color-gold-text);
-}
-
-.slot-row[data-meal='true'] .slot-time {
-  color: var(--color-gold-text);
-}
-
-.slot-edit {
-  display: inline-block;
-  width: auto;
-  margin: 8px 8px 0 0;
-  padding: 6px 14px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 999px;
-  background: none;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-weight: 500;
-  text-decoration: none;
-}
-
-/* The edit form is a dialog, not something appended to the bottom of the page.
-   Below the fold it meant scrolling to find it and the list reflowing under
-   your thumb as it appeared. */
-.scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: var(--color-scrim);
-}
-
-.schedule-form {
-  width: 100%;
-  max-width: 400px;
-  max-height: 84vh;
-  overflow-y: auto;
-  padding: 20px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 14px;
-  background: var(--color-raised);
-}
-
-.schedule-form h2 {
-  margin: 0 0 16px;
-  font-family: var(--font-serif);
-  font-size: 21px;
-  font-weight: 600;
-}
-
-/* The page behind a dialog does not scroll. */
-body.dialog-open {
-  overflow: hidden;
-}
-
-.schedule-form label {
-  font-size: 13px;
-}
-
-.checkline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0 16px;
-  font-size: 15px;
-}
-
-.checkline input {
-  width: auto;
-  margin: 0;
-}
-
-/* Five tabs rather than four: tighter, so the longest label still fits on a
-   narrow phone. */
-.tabs button {
-  padding: 9px 2px 11px;
-  font-size: 10px;
-  letter-spacing: -0.01em;
-}
-
-.tabs .tab-pill {
-  width: 40px;
-  padding: 4px 0;
-}
-
-/* Which session's programme is being looked at */
-.session-picker {
-  margin-bottom: 10px;
-}
-
-.session-picker button {
-  font-size: 12px;
-  font-weight: 500;
-}
-
-/* The phone's own time picker, made to match everything else. */
-input[type='time'] {
-  min-height: 46px;
-  font-variant-numeric: tabular-nums;
-}
-
-input[type='time']::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  opacity: 0.5;
-}
-
-/* What is being served */
-.slot-what .menu {
-  margin-top: 5px;
-  color: var(--color-gold-text);
-  font-size: 14px;
-}
-
-.slot-edit + .slot-edit {
-  margin-left: 14px;
-}
-
-.schedule-form textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 6px;
-  background: none;
-  color: var(--color-text);
-  font-family: inherit;
-  font-size: 15px;
-  resize: vertical;
-}
-
-.schedule-form .lede {
-  margin-bottom: 14px;
-}
-
-/* The quiet actions under a dialog are separate lines, not a run-on. */
-.schedule-form .linkish {
-  display: block;
-  width: auto;
-  margin: 14px 0 0;
-  text-align: left;
-}
-
-
-/* Two fields side by side in the dialog.
-   A native time input carries an intrinsic width from its own shadow DOM, so
-   the flex item AND the input both have to be allowed to shrink. Setting it on
-   the field alone left the two overlapping. */
-/* Grid, not flex. A native time input carries an intrinsic width from its own
-   shadow DOM, and a flex item will happily overflow to honour it. minmax(0,
-   1fr) columns cannot: the track is the width, whatever the content wants. */
-.schedule-form .pair {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
-}
-
-.schedule-form .pair .field {
-  min-width: 0;
-}
-
-.schedule-form input,
-.schedule-form textarea {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  text-align: left;
-}
-
-.schedule-form input[type='time'] {
-  padding: 11px 8px;
-  font-size: 16px;
-}
-
-/* Compact, so the whole form fits without hunting below the fold. The menu
-   field appearing was pushing Save off the bottom of the screen. */
-.schedule-form {
-  padding: 18px;
-}
-
-.schedule-form h2 {
-  margin-bottom: 12px;
-}
-
-.schedule-form .field {
-  margin-bottom: 12px;
-}
-
-.schedule-form label {
-  margin-bottom: 4px;
-}
-
-.schedule-form input,
-.schedule-form textarea {
-  padding: 9px 12px;
-}
-
-.schedule-form .checkline {
-  margin: 2px 0 12px;
-}
-
-.schedule-form button[type='button'] {
-  margin-top: 4px;
-}
-
-.schedule-form .linkish {
-  margin-top: 10px;
-}
-
-
-/* The checkbox was picking up the full width meant for text fields, which
-   pushed its label to the far side of the dialog and wrapped it. */
-.schedule-form .checkline {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-}
-
-.schedule-form .checkline input[type='checkbox'] {
-  flex: none;
-  width: 22px;
-  min-width: 22px;
-  height: 22px;
-  margin: 0;
-  padding: 0;
-}
-
-/* Remove and Cancel as two pills side by side, far enough apart that neither
-   is hit by accident. Remove carries the red that means consequence. */
-.dialog-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.dialog-actions button {
-  width: 100%;
-  margin: 0;
-  padding: 12px 10px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 999px;
-  background: none;
-  color: var(--color-text-muted);
-  font-size: 15px;
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.dialog-actions button[data-kind='danger'] {
-  border-color: var(--color-red-bg);
-  background: var(--color-red-bg);
-  color: var(--color-red-text);
-}
-
-
-/* The two quiet actions in a dialog keep their own row rather than stacking. */
-.schedule-form .linkish {
-  margin-top: 0;
 }

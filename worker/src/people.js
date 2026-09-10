@@ -27,21 +27,30 @@ function reconcile(rows) {
   return latest;
 }
 
-function absencesByDelegate(latest) {
+// Only sessions that still exist, matching the roster and the delegate's own
+// screen. Three places counted the same thing and one of them counted orphans.
+function absencesByDelegate(latest, known) {
   const counts = new Map();
   for (const row of latest.values()) {
     if (row.status !== 'absent') continue;
+    if (known && !known.has(row.session_id)) continue;
     counts.set(row.bk_id, (counts.get(row.bk_id) || 0) + 1);
   }
   return counts;
 }
 
+async function knownSessions(env) {
+  const rows = await readTab(env, 'sessions');
+  return new Set(rows.map((row) => row.session_id).filter(Boolean));
+}
+
 export async function directory(env) {
-  const [delegates, attendance] = await Promise.all([
+  const [delegates, attendance, known] = await Promise.all([
     readTab(env, 'delegates'),
     readTab(env, 'attendance'),
+    knownSessions(env),
   ]);
-  const counts = absencesByDelegate(reconcile(attendance));
+  const counts = absencesByDelegate(reconcile(attendance), known);
 
   const people = delegates
     .filter((row) => row.bk_id && isTrue(row.active))
@@ -117,14 +126,15 @@ export async function delegateDetail(env, bkId) {
 // a "below 80%" section, which is the other half of section 8. Showing an
 // empty grade section now would be a promise the app cannot keep.
 export async function dashboard(env) {
-  const [delegates, attendance, requests] = await Promise.all([
+  const [delegates, attendance, requests, known] = await Promise.all([
     readTab(env, 'delegates'),
     readTab(env, 'attendance'),
     pendingRequests(env),
+    knownSessions(env),
   ]);
 
   const latest = reconcile(attendance);
-  const counts = absencesByDelegate(latest);
+  const counts = absencesByDelegate(latest, known);
   const nameOf = new Map(
     delegates
       .filter((row) => isTrue(row.active))

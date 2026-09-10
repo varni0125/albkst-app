@@ -1377,7 +1377,7 @@ function drawSchedule(schedule, editable) {
       const edit = document.createElement('button');
       edit.className = 'slot-edit';
       edit.type = 'button';
-      edit.textContent = 'Change';
+      edit.textContent = 'Edit';
       edit.addEventListener('click', () => scheduleForm(item));
       what.append(edit);
 
@@ -1498,7 +1498,7 @@ function scheduleForm(item) {
     `<input id="${id}" type="time" value="${escape(value || '')}" /></div>`;
 
   form.innerHTML =
-    `<h2>${item ? 'Change this item' : 'Add an item'}</h2>` +
+    `<h2>${item ? 'Edit this item' : 'Add an item'}</h2>` +
     `<div class="pair">${timeField('Start', 'sf-start', item?.rawTime)}${timeField('End', 'sf-end', item?.rawEndTime)}</div>` +
     field('What', 'sf-item', item?.item, 'Dinner') +
     `<div class="pair">${field('Presenter', 'sf-presenter', item?.presenter, '')}${field('Location', 'sf-location', item?.location, 'Main Hall')}</div>` +
@@ -1834,7 +1834,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=26').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=27').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

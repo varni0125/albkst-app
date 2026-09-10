@@ -214,8 +214,10 @@ textarea {
   text-align: left;
 }
 
+/* Never below 16px on a form field. iOS zooms the whole page when you focus
+   one smaller than that, and no amount of touch-action prevents it. */
 textarea {
-  font-size: 15px;
+  font-size: 16px;
   resize: vertical;
 }
 

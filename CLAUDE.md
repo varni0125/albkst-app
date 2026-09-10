@@ -63,6 +63,15 @@ Build the karyakar side first and well — it is the real product.
   attendance row came out navy with cream bold text — unreadable — and every
   row after inherited it. The data rows are pre-formatted several hundred deep
   and appends write into them.
+- **The check-in window state lives in the durable object, not the Sheet.**
+  Read from the Sheet it comes through the per-isolate cache, so opening
+  check-in cleared it for one request while everyone else read a copy still
+  saying closed. Measured: twenty-three of thirty delegates told check-in was
+  not open, seconds after a karyakar opened it. The Sheet stays the record;
+  the object is the answer.
+- **A failed read serves the last good copy rather than an error.** Slightly
+  old data beats telling someone their screen is broken when it is a few
+  seconds behind.
 - **Attendance is append-only and reconciled by `marked_at`**, never by row
   order. The sheet is something karyakars will sort.
 - **Dates in the sheet must stay `yyyy-mm-dd`.** They are compared as strings.

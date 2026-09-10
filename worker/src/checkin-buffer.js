@@ -20,6 +20,24 @@ const FLUSH_AFTER_MS = 1000;
 const RETRY_AFTER_MS = 5000;
 
 export class CheckinBuffer extends DurableObject {
+  // The window state lives here as well as in the Sheet.
+  //
+  // Read from the Sheet it comes through a cache that lives in one isolate, so
+  // opening check-in cleared it for one request and the other twenty-nine read
+  // a copy that still said closed. Measured: twenty-three of thirty delegates
+  // told check-in was not open, seconds after a karyakar opened it.
+  //
+  // This object is one per session and strongly consistent, so what it says is
+  // true everywhere at once. The Sheet remains the record; this is the answer.
+  async setWindow(state) {
+    await this.ctx.storage.put('checkin_state', state);
+    return { ok: true };
+  }
+
+  async windowState() {
+    return (await this.ctx.storage.get('checkin_state')) || null;
+  }
+
   // Durable before the delegate is told it worked. A row here is a check-in
   // that has happened, whether or not the Sheet knows yet.
   async queue(row) {

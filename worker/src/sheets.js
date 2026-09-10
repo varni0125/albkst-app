@@ -17,13 +17,19 @@ let cachedToken = null; // { token, expiresAt }
 // judgement about what it costs to be wrong: a roster that is a minute out of
 // date is fine, a check-in that is three seconds out of date is fine, and any
 // write clears its own tab immediately.
+// How stale each tab may be. These are generous on purpose: the read limit is
+// sixty a minute and thirty people arriving at once will spend them.
+//
+// Correctness does not rest on these numbers. Anything that decides on current
+// state reads past the cache entirely, and the check-in window lives in a
+// durable object rather than here.
 const TAB_MAX_AGE_MS = {
-  delegates: 60000,
-  karyakars: 60000,
-  sessions: 15000,
-  attendance: 3000,
-  scores: 5000,
-  absence_requests: 2000,
+  delegates: 300000,      // the roster changes a few times a year
+  karyakars: 300000,
+  sessions: 60000,        // the window state is not read from here
+  attendance: 10000,      // a delegate's own screen polls every eight seconds
+  scores: 30000,
+  absence_requests: 10000,
 };
 const tabCache = new Map(); // tab -> { rows, at }
 const headerCache = new Map(); // tab -> headers, which never change
@@ -216,7 +222,18 @@ export async function readTab(env, tab, { fresh = false } = {}) {
     return records;
   }
 
-  await fetchAllTabs(env);
+  try {
+    await fetchAllTabs(env);
+  } catch (error) {
+    // Google refused, most likely because a roomful of people arrived at once.
+    // Slightly old data beats an error message: the alternative is telling
+    // someone their screen is broken when it is merely a few seconds behind.
+    if (cached) {
+      console.warn('serving stale', tab, error.message);
+      return cached.rows;
+    }
+    throw error;
+  }
   return tabCache.get(tab)?.rows || [];
 }
 

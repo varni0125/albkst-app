@@ -163,7 +163,7 @@ export default {
       }
 
       if (method === 'GET' && path === '/sessions') {
-        return json(env, { sessions: await listSessions(env) });
+        return json(env, { sessions: await listSessions(env, account.role === 'karyakar') });
       }
 
       if (method === 'GET' && path === '/delegates') {

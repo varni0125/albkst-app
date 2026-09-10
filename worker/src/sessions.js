@@ -57,17 +57,34 @@ function publicSession(row) {
   };
 }
 
-export async function listSessions(env) {
-  const rows = await readTab(env, 'sessions');
-  return rows
-    .filter((row) => row.session_id)
-    .map(publicSession)
-    .sort((a, b) => String(a.startDate).localeCompare(String(b.startDate)));
+export async function listSessions(env, live = false) {
+  const rows = await readTab(env, 'sessions').then((all) => all.filter((row) => row.session_id));
+  const sessions = rows.map(publicSession);
+
+  // A karyakar's list should agree with the session they are about to open,
+  // so it asks each buffer what the window is actually doing.
+  if (live) {
+    const states = await Promise.all(
+      sessions.map((session) => checkinBuffer(env, session.id).windowState())
+    );
+    sessions.forEach((session, i) => {
+      if (!states[i]) return;
+      session.checkinState = states[i];
+      session.checkinOpen = states[i] === 'open';
+    });
+  }
+
+  return sessions.sort((a, b) => String(a.startDate).localeCompare(String(b.startDate)));
 }
 
 export async function findSession(env, sessionId) {
   const rows = await readTab(env, 'sessions');
-  return rows.find((row) => row.session_id === sessionId) || null;
+  const row = rows.find((row) => row.session_id === sessionId) || null;
+  if (!row) return null;
+  // What the durable object says wins, for the same reason a check-in trusts
+  // it: a karyakar must not see a window they just opened as still shut.
+  const live = await checkinBuffer(env, sessionId).windowState();
+  return live ? { ...row, checkin_state: live } : row;
 }
 
 // The current attendance state, one entry per delegate per session: the most
@@ -166,6 +183,10 @@ export async function rosterFor(env, sessionId) {
 }
 
 export async function setWindow(env, session, state) {
+  // The durable object first: it is what every check-in consults, and it is
+  // true everywhere the instant it is written. The Sheet is the record and can
+  // follow a moment later.
+  await checkinBuffer(env, session.session_id).setWindow(state);
   await updateRowWhere(env, 'sessions', 'session_id', session.session_id, {
     checkin_state: state,
   });
@@ -201,7 +222,9 @@ export async function selfCheckin(env, session, bkId, code) {
   if (hasEnded(session)) {
     return { ok: false, error: 'That session is over.' };
   }
-  if (session.checkin_state !== 'open') {
+  const buffer = checkinBuffer(env, session.session_id);
+  const state = (await buffer.windowState()) || session.checkin_state;
+  if (state !== 'open') {
     return { ok: false, error: 'Check-in is not open for this session.' };
   }
   // Proof of being in the room. Without it a delegate could check in from
@@ -220,7 +243,7 @@ export async function selfCheckin(env, session, bkId, code) {
   // No read first either: checking whether they were already present cost a
   // read of the whole ledger per check-in, and the ledger tolerates a
   // duplicate by design — the most recent row wins and both are kept.
-  await checkinBuffer(env, session.session_id).queue(
+  await buffer.queue(
     attendanceRow({
       sessionId: session.session_id,
       bkId,

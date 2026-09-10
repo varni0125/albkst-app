@@ -1091,3 +1091,26 @@ body.dialog-open {
   width: auto;
   margin: 0;
 }
+
+/* Five tabs rather than four: tighter, so the longest label still fits on a
+   narrow phone. */
+.tabs button {
+  padding: 9px 2px 11px;
+  font-size: 10px;
+  letter-spacing: -0.01em;
+}
+
+.tabs .tab-pill {
+  width: 40px;
+  padding: 4px 0;
+}
+
+/* Which session's programme is being looked at */
+.session-picker {
+  margin-bottom: 10px;
+}
+
+.session-picker button {
+  font-size: 12px;
+  font-weight: 500;
+}

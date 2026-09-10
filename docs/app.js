@@ -67,6 +67,7 @@ const TABS = {
   karyakar: [
     { key: 'sessions', label: 'Sessions', icon: ICON.calendar, open: () => showSessions() },
     { key: 'delegates', label: 'Delegates', icon: ICON.users, open: () => showDirectory() },
+    { key: 'programme', label: 'Programme', icon: ICON.programme, open: () => showProgramme() },
     { key: 'scores', label: 'Scores', icon: ICON.scores, open: () => showScores() },
     { key: 'dashboard', label: 'Attention', icon: ICON.attention, open: () => showDashboard() },
   ],
@@ -1384,16 +1385,53 @@ function drawSchedule(schedule, editable) {
 
 /* ---------- karyakar: changing the programme ---------- */
 
-async function openScheduleEditor(sessionId) {
-  scheduleSessionId = sessionId;
+// The Programme tab. Opens on whichever session is next, and lets a karyakar
+// switch to another so October can be prepared in September.
+async function showProgramme() {
+  show('scheduleEdit');
+  if (!lastSessions) {
+    const list = await call('/sessions');
+    if (!list.ok) return say(list.body.error || 'Could not load the sessions.');
+    lastSessions = list.body.sessions;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const chosen =
+    lastSessions.find((s) => s.id === scheduleSessionId) ||
+    lastSessions.find((s) => s.checkinOpen) ||
+    lastSessions.find((s) => (s.endDate || s.startDate) >= today) ||
+    lastSessions[lastSessions.length - 1];
+  if (!chosen) return say('No sessions are scheduled yet.');
+  await openScheduleEditor(chosen);
+}
+
+async function openScheduleEditor(session) {
+  scheduleSessionId = session.id;
   clearMessage();
   show('scheduleEdit');
-  const session = lastSession;
-  document.getElementById('schedule-edit-where').textContent = session
-    ? `${dateRange(session.startDate, session.endDate)} · ${session.location}`
-    : '';
+
+  const where = document.getElementById('schedule-edit-where');
+  where.textContent = '';
+  const picker = document.createElement('div');
+  picker.className = 'day-tabs session-picker';
+  for (const option of lastSessions || []) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = dateRange(option.startDate, option.endDate);
+    if (option.id === session.id) button.setAttribute('aria-current', 'page');
+    button.addEventListener('click', () => {
+      openDay = 1;
+      openScheduleEditor(option);
+    });
+    picker.append(button);
+  }
+  where.append(picker);
+  const at = document.createElement('p');
+  at.className = 'lede';
+  at.textContent = session.location;
+  where.append(at);
+
   skeleton(document.getElementById('schedule-edit-body'), { lines: 6 });
-  const { ok, body } = await call(`/sessions/${sessionId}/schedule`);
+  const { ok, body } = await call(`/sessions/${session.id}/schedule`);
   if (!ok) return say(body.error || 'Could not load the programme.');
   lastSchedule = body;
   drawSchedule(body, true);
@@ -1604,12 +1642,9 @@ document.getElementById('session-back').addEventListener('click', () => {
 
 document.getElementById('detail-back').addEventListener('click', () => showDirectory());
 document.getElementById('my-session-back').addEventListener('click', () => showStanding());
-document.getElementById('open-schedule').addEventListener('click', () =>
-  openScheduleEditor(openSessionId)
-);
 document.getElementById('schedule-back').addEventListener('click', () => {
   closeScheduleForm();
-  show('session');
+  selectTab('sessions');
 });
 
 // Escape closes it, for anyone on a laptop.
@@ -1643,7 +1678,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=19').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=20').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

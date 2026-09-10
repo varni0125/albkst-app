@@ -173,7 +173,8 @@ export async function shiftPreview(env, sessionId, day, afterTime, includeAnchor
       const at = sortKey(row.start_time);
       return includeAnchor ? at >= anchor : at > anchor;
     })
-    .sort((a, b) => sortKey(a.start_time) - sortKey(b.start_time));
+    .sort((a, b) => sortKey(a.start_time) - sortKey(b.start_time))
+    .map((row) => ({ ...row, shown: displayTime(row.start_time) }));
 }
 
 export async function shiftFrom(env, sessionId, day, afterTime, includeAnchor, minutes) {

@@ -312,7 +312,7 @@ export default {
           if (preview) {
             const moving = await shiftPreview(env, session.session_id, day, afterTime, includeAnchor);
             return json(env, {
-              moving: moving.map((row) => ({ item: row.item, time: row.start_time })),
+              moving: moving.map((row) => ({ item: row.item, time: row.shown })),
             });
           }
 

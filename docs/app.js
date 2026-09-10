@@ -1502,7 +1502,7 @@ function scheduleForm(item) {
     `<div class="pair">${timeField('Start', 'sf-start', item?.rawTime)}${timeField('End', 'sf-end', item?.rawEndTime)}</div>` +
     field('What', 'sf-item', item?.item, 'Dinner') +
     `<div class="pair">${field('Presenter', 'sf-presenter', item?.presenter, '')}${field('Location', 'sf-location', item?.location, 'Main Hall')}</div>` +
-    `<label class="checkline"><input type="checkbox" id="sf-meal" ${item?.isMeal ? 'checked' : ''} /> This is a meal, with a menu</label>` +
+    `<label class="checkline"><input type="checkbox" id="sf-meal" ${item?.isMeal ? 'checked' : ''} /> This is a meal</label>` +
     `<div class="field" id="sf-menu-field"${item?.isMeal ? '' : ' hidden'}>` +
     '<label for="sf-menu">Menu</label>' +
     `<textarea id="sf-menu" rows="2" placeholder="Rotli, shaak, dal bhaat, salad">${escape(item?.note || '')}</textarea>` +
@@ -1519,21 +1519,27 @@ function scheduleForm(item) {
   save.addEventListener('click', () => saveScheduleItem(item));
   form.append(save);
 
+  // Two pills side by side, so Remove is never hit reaching for Cancel.
+  const actions = document.createElement('div');
+  actions.className = 'dialog-actions';
+
   if (item) {
     const remove = document.createElement('button');
-    remove.className = 'linkish';
     remove.type = 'button';
-    remove.textContent = 'Remove this item';
+    remove.dataset.kind = 'danger';
+    remove.textContent = 'Remove';
     remove.addEventListener('click', () => saveScheduleItem(item, true));
-    form.append(remove);
+    actions.append(remove);
   }
 
   const cancel = document.createElement('button');
-  cancel.className = 'linkish';
   cancel.type = 'button';
   cancel.textContent = 'Cancel';
   cancel.addEventListener('click', closeScheduleForm);
-  form.append(cancel);
+  actions.append(cancel);
+
+  if (!item) actions.style.gridTemplateColumns = 'minmax(0, 1fr)';
+  form.append(actions);
 
   holder.append(form);
   document.getElementById('sf-item').focus();
@@ -1828,7 +1834,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=25').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=26').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

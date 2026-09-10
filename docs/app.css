@@ -1157,13 +1157,16 @@ input[type='time']::-webkit-calendar-picker-indicator {
    A native time input carries an intrinsic width from its own shadow DOM, so
    the flex item AND the input both have to be allowed to shrink. Setting it on
    the field alone left the two overlapping. */
+/* Grid, not flex. A native time input carries an intrinsic width from its own
+   shadow DOM, and a flex item will happily overflow to honour it. minmax(0,
+   1fr) columns cannot: the track is the width, whatever the content wants. */
 .schedule-form .pair {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
 }
 
 .schedule-form .pair .field {
-  flex: 1 1 0;
   min-width: 0;
 }
 
@@ -1213,4 +1216,51 @@ input[type='time']::-webkit-calendar-picker-indicator {
 
 .schedule-form .linkish {
   margin-top: 10px;
+}
+
+
+/* The checkbox was picking up the full width meant for text fields, which
+   pushed its label to the far side of the dialog and wrapped it. */
+.schedule-form .checkline {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.schedule-form .checkline input[type='checkbox'] {
+  flex: none;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+}
+
+/* Remove and Cancel as two pills side by side, far enough apart that neither
+   is hit by accident. Remove carries the red that means consequence. */
+.dialog-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.dialog-actions button {
+  width: 100%;
+  margin: 0;
+  padding: 12px 10px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.dialog-actions button[data-kind='danger'] {
+  border-color: var(--color-red-bg);
+  background: var(--color-red-bg);
+  color: var(--color-red-text);
 }

@@ -81,6 +81,8 @@ const TABS = {
 /* ---------- plumbing ---------- */
 
 function show(name) {
+  // A dialog belongs to the screen that opened it.
+  if (document.body.classList.contains('dialog-open')) closeScheduleForm();
   for (const [key, section] of Object.entries(views)) section.hidden = key !== name;
   const polling = ['session', 'delegate'];
   if (!polling.includes(name)) stopPolling();
@@ -1462,7 +1464,12 @@ function openDialog(build) {
 }
 
 function closeScheduleForm() {
-  document.getElementById('schedule-form').textContent = '';
+  const holder = document.getElementById('schedule-form');
+  holder.textContent = '';
+  // The class as well as the contents. Emptying it alone left a full screen
+  // scrim in place: invisible, but covering the page, greying it out and
+  // swallowing every tap.
+  holder.className = '';
   document.body.classList.remove('dialog-open');
 }
 
@@ -1821,7 +1828,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=23').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=24').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

@@ -26,7 +26,7 @@ import {
   pendingRequests,
 } from './requests.js';
 import { directory, delegateDetail, dashboard } from './people.js';
-import { scheduleFor, addItem, editItem, removeItem, itemProblem } from './schedule.js';
+import { scheduleFor, addItem, editItem, removeItem, itemProblem, shiftFrom, shiftPreview } from './schedule.js';
 
 export { Account };
 export { CheckinBuffer } from './checkin-buffer.js';
@@ -299,6 +299,30 @@ export default {
           if (problem) return fail(env, 400, problem);
           await editItem(env, entry.id, entry);
           return json(env, await scheduleFor(env, session));
+        }
+
+        // Moving a run of the day, either after an edit or because it is
+        // simply running late.
+        if (method === 'POST' && action === '/schedule-shift') {
+          const denied = karyakarOnly();
+          if (denied) return denied;
+          const { day, afterTime, includeAnchor, minutes, preview } = await readJson(request);
+          if (!day || !afterTime) return fail(env, 400, 'Which day, and from when?');
+
+          if (preview) {
+            const moving = await shiftPreview(env, session.session_id, day, afterTime, includeAnchor);
+            return json(env, {
+              moving: moving.map((row) => ({ item: row.item, time: row.start_time })),
+            });
+          }
+
+          if (!Number.isFinite(Number(minutes)) || Number(minutes) === 0) {
+            return fail(env, 400, 'By how many minutes?');
+          }
+          const moved = await shiftFrom(
+            env, session.session_id, day, afterTime, includeAnchor, Number(minutes)
+          );
+          return json(env, { moved, ...(await scheduleFor(env, session)) });
         }
 
         if (method === 'POST' && action === '/absence-request') {

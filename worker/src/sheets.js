@@ -312,6 +312,44 @@ export async function updateRowWhere(env, tab, keyColumn, keyValue, patch) {
   invalidate(tab);
 }
 
+// Several rows in one request. Shifting a running order back half an hour can
+// touch fourteen rows, and Google serialises writes to a spreadsheet, so
+// fourteen separate updates would be fourteen times as slow.
+export async function updateRowsWhere(env, tab, keyColumn, updates) {
+  if (!updates.length) return 0;
+
+  const data = await api(env, `/values/${encodeURIComponent(tab)}`);
+  const rows = data.values || [];
+  const headers = rows[0] || [];
+  const keyIndex = headers.indexOf(keyColumn);
+  if (keyIndex < 0) throw new Error(`${tab} has no ${keyColumn} column`);
+
+  const lastColumn = columnLetter(headers.length);
+  const payload = [];
+  for (const { key, patch } of updates) {
+    const index = rows.findIndex((row, i) => i > 0 && row[keyIndex] === key);
+    if (index < 1) continue;
+    const row = rows[index].slice();
+    headers.forEach((name, i) => {
+      if (name in patch) row[i] = patch[name];
+      else if (row[i] === undefined) row[i] = '';
+    });
+    const number = index + 1;
+    payload.push({
+      range: `${tab}!A${number}:${lastColumn}${number}`,
+      values: [row],
+    });
+  }
+  if (!payload.length) return 0;
+
+  await api(env, '/values:batchUpdate', {
+    method: 'POST',
+    body: JSON.stringify({ valueInputOption: 'RAW', data: payload }),
+  });
+  invalidate(tab);
+  return payload.length;
+}
+
 function columnLetter(count) {
   let letter = '';
   let n = count;

@@ -1367,6 +1367,7 @@ function drawSchedule(schedule, editable) {
       `<h2>${escape(item.item)}</h2>` + (detail ? `<p>${escape(detail)}</p>` : '');
     if (item.note) {
       const note = document.createElement('p');
+      note.className = item.isMeal ? 'menu' : '';
       note.textContent = item.note;
       what.append(note);
     }
@@ -1377,6 +1378,13 @@ function drawSchedule(schedule, editable) {
       edit.textContent = 'Change';
       edit.addEventListener('click', () => scheduleForm(item));
       what.append(edit);
+
+      const push = document.createElement('button');
+      push.className = 'slot-edit';
+      push.type = 'button';
+      push.textContent = 'Push back';
+      push.addEventListener('click', () => pushBackDialog(item));
+      what.append(push);
     }
     row.append(what);
     body.append(row);
@@ -1437,6 +1445,22 @@ async function openScheduleEditor(session) {
   drawSchedule(body, true);
 }
 
+// One dialog mechanism, so everything that interrupts looks the same.
+function openDialog(build) {
+  const holder = document.getElementById('schedule-form');
+  holder.textContent = '';
+  holder.className = 'scrim';
+  document.body.classList.add('dialog-open');
+  holder.addEventListener('click', (event) => {
+    if (event.target === holder) closeScheduleForm();
+  });
+  const panel = document.createElement('div');
+  panel.className = 'schedule-form';
+  build(panel);
+  holder.append(panel);
+  return panel;
+}
+
 function closeScheduleForm() {
   document.getElementById('schedule-form').textContent = '';
   document.body.classList.remove('dialog-open');
@@ -1471,12 +1495,21 @@ function scheduleForm(item) {
     `<div class="pair">${timeField('Start', 'sf-start', item?.rawTime)}${timeField('End', 'sf-end', item?.rawEndTime)}</div>` +
     field('What', 'sf-item', item?.item, 'Dinner') +
     `<div class="pair">${field('Presenter', 'sf-presenter', item?.presenter, '')}${field('Location', 'sf-location', item?.location, 'Main Hall')}</div>` +
-    `<label class="checkline"><input type="checkbox" id="sf-meal" ${item?.isMeal ? 'checked' : ''} /> This is a meal</label>`;
+    `<label class="checkline"><input type="checkbox" id="sf-meal" ${item?.isMeal ? 'checked' : ''} /> This is a meal</label>` +
+    `<div class="field" id="sf-menu-field"${item?.isMeal ? '' : ' hidden'}>` +
+    '<label for="sf-menu">Menu</label>' +
+    `<textarea id="sf-menu" rows="2" placeholder="Rotli, shaak, dal bhaat, salad">${escape(item?.note || '')}</textarea>` +
+    '</div>';
+
+  // The menu is a thing about meals, so it appears when something is one.
+  form.querySelector('#sf-meal').addEventListener('change', (event) => {
+    form.querySelector('#sf-menu-field').hidden = !event.target.checked;
+  });
 
   const save = document.createElement('button');
   save.type = 'button';
   save.textContent = item ? 'Save changes' : 'Add to the programme';
-  save.addEventListener('click', () => saveScheduleItem(item?.id));
+  save.addEventListener('click', () => saveScheduleItem(item));
   form.append(save);
 
   if (item) {
@@ -1484,7 +1517,7 @@ function scheduleForm(item) {
     remove.className = 'linkish';
     remove.type = 'button';
     remove.textContent = 'Remove this item';
-    remove.addEventListener('click', () => saveScheduleItem(item.id, true));
+    remove.addEventListener('click', () => saveScheduleItem(item, true));
     form.append(remove);
   }
 
@@ -1499,9 +1532,16 @@ function scheduleForm(item) {
   document.getElementById('sf-item').focus();
 }
 
-async function saveScheduleItem(id, remove) {
+function minutesOf(time) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(time || '').trim());
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+
+async function saveScheduleItem(item, remove) {
   clearMessage();
+  const id = item?.id;
   const value = (name) => document.getElementById(name)?.value.trim() || '';
+  const isMeal = document.getElementById('sf-meal')?.checked || false;
   const entry = remove
     ? { id, remove: true }
     : {
@@ -1512,8 +1552,15 @@ async function saveScheduleItem(id, remove) {
         item: value('sf-item'),
         presenter: value('sf-presenter'),
         location: value('sf-location'),
-        isMeal: document.getElementById('sf-meal')?.checked || false,
+        isMeal,
+        note: isMeal ? value('sf-menu') : '',
       };
+
+  // How much later everything after this now sits, if anything.
+  const before = minutesOf(item?.rawEndTime || item?.rawTime);
+  const after = remove ? null : minutesOf(entry.endTime || entry.time);
+  const delta = before !== null && after !== null ? after - before : 0;
+  const anchor = item?.rawTime;
 
   const path = id ? 'schedule-edit' : 'schedule';
   const { ok, body } = await call(`/sessions/${scheduleSessionId}/${path}`, {
@@ -1521,10 +1568,100 @@ async function saveScheduleItem(id, remove) {
     body: JSON.stringify(entry),
   });
   if (!ok) return say(body.error || 'That did not save.');
-  say(remove ? 'Removed.' : 'Saved.', 'good');
+
   closeScheduleForm();
   lastSchedule = body;
   drawSchedule(body, true);
+
+  if (!remove && id && delta !== 0 && anchor) {
+    await offerShift(anchor, delta, false);
+  } else {
+    say(remove ? 'Removed.' : 'Saved.', 'good');
+  }
+}
+
+// Never rewrites a run of the day without showing what it is about to move.
+async function offerShift(afterTime, minutes, includeAnchor) {
+  const preview = await call(`/sessions/${scheduleSessionId}/schedule-shift`, {
+    method: 'POST',
+    body: JSON.stringify({ day: openDay, afterTime, includeAnchor, preview: true }),
+  });
+  const moving = preview.ok ? preview.body.moving : [];
+  if (!moving.length) return say('Saved.', 'good');
+
+  openDialog((panel) => {
+    const direction = minutes > 0 ? 'later' : 'earlier';
+    const size = Math.abs(minutes);
+    panel.innerHTML =
+      '<h2>Move what comes after?</h2>' +
+      `<p class="lede">${moving.length} ${moving.length === 1 ? 'item' : 'items'} on this day would move ` +
+      `${size} ${size === 1 ? 'minute' : 'minutes'} ${direction}.</p>`;
+
+    const list = document.createElement('div');
+    for (const row of moving.slice(0, 6)) {
+      const line = document.createElement('p');
+      line.className = 'hint';
+      line.textContent = `${row.time}  ${row.item}`;
+      list.append(line);
+    }
+    if (moving.length > 6) {
+      const more = document.createElement('p');
+      more.className = 'hint';
+      more.textContent = `and ${moving.length - 6} more`;
+      list.append(more);
+    }
+    panel.append(list);
+
+    const move = document.createElement('button');
+    move.type = 'button';
+    move.textContent = 'Move them';
+    move.addEventListener('click', () => applyShift(afterTime, minutes, includeAnchor));
+    panel.append(move);
+
+    const leave = document.createElement('button');
+    leave.className = 'linkish';
+    leave.type = 'button';
+    leave.textContent = includeAnchor ? 'Cancel' : 'Leave them where they are';
+    leave.addEventListener('click', closeScheduleForm);
+    panel.append(leave);
+  });
+}
+
+async function applyShift(afterTime, minutes, includeAnchor) {
+  const { ok, body } = await call(`/sessions/${scheduleSessionId}/schedule-shift`, {
+    method: 'POST',
+    body: JSON.stringify({ day: openDay, afterTime, includeAnchor, minutes }),
+  });
+  if (!ok) return say(body.error || 'Could not move them.');
+  closeScheduleForm();
+  say(`${body.moved} ${body.moved === 1 ? 'item' : 'items'} moved.`, 'good');
+  lastSchedule = body;
+  drawSchedule(body, true);
+}
+
+// The thing that actually happens at a session: the day is running behind.
+function pushBackDialog(item) {
+  openDialog((panel) => {
+    panel.innerHTML =
+      '<h2>Running late?</h2>' +
+      `<p class="lede">Move ${escape(item.item)} and everything after it on this day.</p>`;
+    const row = document.createElement('div');
+    row.className = 'action-row';
+    for (const minutes of [15, 30, 60]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = minutes === 60 ? '1 hour' : `${minutes} min`;
+      button.addEventListener('click', () => applyShift(item.rawTime, minutes, true));
+      row.append(button);
+    }
+    panel.append(row);
+    const cancel = document.createElement('button');
+    cancel.className = 'linkish';
+    cancel.type = 'button';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', closeScheduleForm);
+    panel.append(cancel);
+  });
 }
 
 /* ---------- session lifecycle ---------- */
@@ -1684,7 +1821,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=21').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=23').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

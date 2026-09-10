@@ -9,7 +9,7 @@
 // that the session already knows. Cue numbers and total time are not stored
 // either: one is row order, the other is end minus start.
 
-import { readTab, appendRows, updateRowWhere } from './sheets.js';
+import { readTab, appendRows, updateRowWhere, updateRowsWhere } from './sheets.js';
 
 const TAB = 'schedule';
 const DAYS = [1, 2, 3];
@@ -151,4 +151,45 @@ export async function removeItem(env, id) {
     is_meal: '',
     note: '',
   });
+}
+
+
+function addMinutes(time, minutes) {
+  const base = sortKey(time);
+  if (base === 9999) return time;
+  const total = ((base + minutes) % 1440 + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+// Which items a shift would move, without moving them. The screen shows this
+// before anything is written, because a schedule someone typed by hand should
+// never be rewritten in bulk without them seeing what is about to happen.
+export async function shiftPreview(env, sessionId, day, afterTime, includeAnchor) {
+  const rows = await readTab(env, TAB);
+  const anchor = sortKey(afterTime);
+  return rows
+    .filter((row) => row.session_id === sessionId && Number(row.day) === Number(day))
+    .filter((row) => {
+      const at = sortKey(row.start_time);
+      return includeAnchor ? at >= anchor : at > anchor;
+    })
+    .sort((a, b) => sortKey(a.start_time) - sortKey(b.start_time));
+}
+
+export async function shiftFrom(env, sessionId, day, afterTime, includeAnchor, minutes) {
+  const moving = await shiftPreview(env, sessionId, day, afterTime, includeAnchor);
+  if (!moving.length || !minutes) return 0;
+
+  return updateRowsWhere(
+    env,
+    TAB,
+    'schedule_id',
+    moving.map((row) => ({
+      key: row.schedule_id,
+      patch: {
+        start_time: addMinutes(row.start_time, minutes),
+        end_time: row.end_time ? addMinutes(row.end_time, minutes) : '',
+      },
+    }))
+  );
 }

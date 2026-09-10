@@ -1399,9 +1399,22 @@ async function openScheduleEditor(sessionId) {
   drawSchedule(body, true);
 }
 
+function closeScheduleForm() {
+  document.getElementById('schedule-form').textContent = '';
+  document.body.classList.remove('dialog-open');
+}
+
 function scheduleForm(item) {
   const holder = document.getElementById('schedule-form');
   holder.textContent = '';
+  holder.className = 'scrim';
+  document.body.classList.add('dialog-open');
+
+  // Tapping the darkened page behind closes it, the way a sheet does.
+  holder.addEventListener('click', (event) => {
+    if (event.target === holder) closeScheduleForm();
+  });
+
   const form = document.createElement('div');
   form.className = 'schedule-form';
 
@@ -1410,6 +1423,7 @@ function scheduleForm(item) {
     `<input id="${id}" type="text" value="${escape(value || '')}" placeholder="${placeholder || ''}" /></div>`;
 
   form.innerHTML =
+    `<h2>${item ? 'Change this item' : 'Add an item'}</h2>` +
     `<div class="pair">${field('Start', 'sf-start', item?.rawTime, '19:30')}${field('End', 'sf-end', item?.rawEndTime, '20:30')}</div>` +
     field('What', 'sf-item', item?.item, 'Dinner') +
     `<div class="pair">${field('Presenter', 'sf-presenter', item?.presenter, '')}${field('Location', 'sf-location', item?.location, 'Main Hall')}</div>` +
@@ -1434,13 +1448,10 @@ function scheduleForm(item) {
   cancel.className = 'linkish';
   cancel.type = 'button';
   cancel.textContent = 'Cancel';
-  cancel.addEventListener('click', () => {
-    holder.textContent = '';
-  });
+  cancel.addEventListener('click', closeScheduleForm);
   form.append(cancel);
 
   holder.append(form);
-  form.scrollIntoView({ block: 'nearest' });
   document.getElementById('sf-item').focus();
 }
 
@@ -1467,7 +1478,7 @@ async function saveScheduleItem(id, remove) {
   });
   if (!ok) return say(body.error || 'That did not save.');
   say(remove ? 'Removed.' : 'Saved.', 'good');
-  document.getElementById('schedule-form').textContent = '';
+  closeScheduleForm();
   lastSchedule = body;
   drawSchedule(body, true);
 }
@@ -1597,8 +1608,15 @@ document.getElementById('open-schedule').addEventListener('click', () =>
   openScheduleEditor(openSessionId)
 );
 document.getElementById('schedule-back').addEventListener('click', () => {
-  document.getElementById('schedule-form').textContent = '';
+  closeScheduleForm();
   show('session');
+});
+
+// Escape closes it, for anyone on a laptop.
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && document.body.classList.contains('dialog-open')) {
+    closeScheduleForm();
+  }
 });
 document.getElementById('schedule-add').addEventListener('click', () => scheduleForm(null));
 document.getElementById('qr-generate').addEventListener('click', generateCode);
@@ -1625,7 +1643,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=18').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=19').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

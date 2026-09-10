@@ -42,6 +42,9 @@
   /* Quiet surface — disabled controls, states with no consequence */
   --color-muted-surface: #1E2E42;
 
+  /* Behind a dialog, so the page reads as out of reach rather than gone */
+  --color-scrim: rgba(6, 11, 18, 0.72);
+
   /* The check-in QR. Deliberately outside the palette: scanners want maximum
      contrast, and a tinted code fails in poor light. */
   --color-qr-dark: #000000;

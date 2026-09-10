@@ -1029,12 +1029,41 @@ button:active:not(:disabled) {
   text-decoration: underline;
 }
 
+/* The edit form is a dialog, not something appended to the bottom of the page.
+   Below the fold it meant scrolling to find it and the list reflowing under
+   your thumb as it appeared. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--color-scrim);
+}
+
 .schedule-form {
-  margin: 18px 0;
-  padding: 18px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 84vh;
+  overflow-y: auto;
+  padding: 20px;
   border: 1px solid var(--color-hairline);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--color-raised);
+}
+
+.schedule-form h2 {
+  margin: 0 0 16px;
+  font-family: var(--font-serif);
+  font-size: 21px;
+  font-weight: 600;
+}
+
+/* The page behind a dialog does not scroll. */
+body.dialog-open {
+  overflow: hidden;
 }
 
 .schedule-form .pair {

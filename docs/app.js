@@ -1011,7 +1011,7 @@ function addPersonDialog(kind) {
     actions.append(cancel);
     panel.append(actions);
 
-    document.getElementById('ap-id').focus();
+    document.getElementById('ap-id')?.focus();
   });
 }
 
@@ -1760,13 +1760,21 @@ function openDialog(build) {
   holder.textContent = '';
   holder.className = 'scrim';
   document.body.classList.add('dialog-open');
-  holder.addEventListener('click', (event) => {
+
+  // Assigned, not added. addEventListener on a element that outlives the
+  // dialog stacks a new handler every time one is opened.
+  holder.onclick = (event) => {
     if (event.target === holder) closeScheduleForm();
-  });
+  };
+
   const panel = document.createElement('div');
   panel.className = 'schedule-form';
-  build(panel);
+
+  // In the document before it is built. Otherwise anything the builder looks
+  // up by id finds nothing, and calling focus on nothing takes the whole
+  // script down with it.
   holder.append(panel);
+  build(panel);
   return panel;
 }
 
@@ -1787,9 +1795,9 @@ function scheduleForm(item) {
   document.body.classList.add('dialog-open');
 
   // Tapping the darkened page behind closes it, the way a sheet does.
-  holder.addEventListener('click', (event) => {
+  holder.onclick = (event) => {
     if (event.target === holder) closeScheduleForm();
-  });
+  };
 
   const form = document.createElement('div');
   form.className = 'schedule-form';
@@ -1849,7 +1857,7 @@ function scheduleForm(item) {
   form.append(actions);
 
   holder.append(form);
-  document.getElementById('sf-item').focus();
+  document.getElementById('sf-item')?.focus();
 }
 
 function minutesOf(time) {
@@ -2057,7 +2065,7 @@ document.getElementById('form-login').addEventListener('submit', (event) => {
       form.reset();
       say('This ID has no PIN yet. Choose one now.', 'notice');
       show('setpin');
-      document.getElementById('setpin-pin').focus();
+      document.getElementById('setpin-pin')?.focus();
       return;
     }
     say(body.error || 'That did not work. Try again.');
@@ -2142,7 +2150,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=35').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=36').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

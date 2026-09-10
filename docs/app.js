@@ -932,10 +932,12 @@ function confirmActive(person, bringBack) {
       closeScheduleForm();
       say(ok ? body.message : body.error || 'That did not work.', ok ? 'good' : 'problem');
       if (ok) {
-        lastRemoved = null;
-        lastDirectory = null;
+        // What the write handed back, not another request: a second request
+        // can land on an isolate whose copy predates the change.
+        lastDirectory = body.directory;
+        lastRemoved = body.removed;
         lastPayload.delegates = null;
-        showDirectory();
+        renderDirectory(document.getElementById('delegate-search').value);
       }
     });
     actions.append(go);
@@ -995,9 +997,10 @@ function addPersonDialog(kind) {
       if (!result.ok) return say(result.body.error || 'That did not save.');
       closeScheduleForm();
       say(result.body.message, 'good');
-      lastDirectory = null;
+      lastDirectory = result.body.directory;
+      lastRemoved = null;
       lastPayload.delegates = null;
-      showDirectory();
+      renderDirectory(document.getElementById('delegate-search').value);
     });
     panel.append(save);
 
@@ -2150,7 +2153,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=37').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=38').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

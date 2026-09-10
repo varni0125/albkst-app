@@ -24,8 +24,11 @@ let cachedToken = null; // { token, expiresAt }
 // state reads past the cache entirely, and the check-in window lives in a
 // durable object rather than here.
 const TAB_MAX_AGE_MS = {
-  delegates: 300000,      // the roster changes a few times a year
-  karyakars: 300000,
+  // The roster changes rarely, but when it does someone is standing there
+  // waiting to see it. Five minutes was long enough that removing a delegate
+  // looked like it had not worked.
+  delegates: 60000,
+  karyakars: 60000,
   sessions: 60000,        // the window state is not read from here
   attendance: 10000,      // a delegate's own screen polls every eight seconds
   scores: 30000,

@@ -221,7 +221,11 @@ export default {
         if (method === 'POST' && path === '/roster/delegate') {
           const result = await addDelegate(env, await readJson(request));
           if (result.error) return fail(env, 400, result.error);
-          return json(env, { ok: true, message: `${result.name} added.` });
+          return json(env, {
+            ok: true,
+            message: `${result.name} added.`,
+            directory: await directory(env),
+          });
         }
         if (method === 'POST' && path === '/roster/karyakar') {
           const result = await addKaryakar(env, await readJson(request));
@@ -229,6 +233,7 @@ export default {
           return json(env, {
             ok: true,
             message: `${result.name} added. They set a PIN at their first sign in.`,
+            directory: await directory(env),
           });
         }
         if (method === 'POST' && path === '/roster/active') {
@@ -239,6 +244,8 @@ export default {
           return json(env, {
             ok: true,
             message: `${result.name} ${active ? 'brought back' : 'removed'}.`,
+            directory: await directory(env),
+            removed: await removedPeople(env),
           });
         }
         return fail(env, 404, 'Not found.');

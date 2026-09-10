@@ -72,7 +72,7 @@ label {
   display: block;
   margin-bottom: 6px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 input {
@@ -288,7 +288,7 @@ footer {
 
 .window-state {
   margin: 0 0 12px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .window-panel button {
@@ -357,7 +357,7 @@ footer {
   padding: 3px 9px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -610,7 +610,7 @@ footer {
   background: none;
   color: var(--color-text-muted);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* A filled pill behind the tab you are on, rather than a colour change alone.

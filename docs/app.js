@@ -37,6 +37,9 @@ let lastSession = null;
 let lastRoster = null;
 let lastDirectory = null;
 let lastStanding = null;
+let lastPayload = {};  // per screen, so a poll that changes nothing touches nothing
+let lastSessions = null;
+let lastDashboard = null;
 let currentTab = null;
 let previousStatus = new Map(); // bkId -> status, so only real changes animate
 let shownTally = null;          // the number currently on screen, for counting up
@@ -259,13 +262,23 @@ function setBadge(key, count) {
 
 async function showSessions() {
   show('sessions');
-  skeleton(document.getElementById('session-list'), { tall: true, lines: 3 });
+  // What was last seen goes up straight away; the network refreshes it behind.
+  // Waiting on a round trip before drawing anything is what made moving
+  // between tabs feel slow.
+  if (lastSessions) drawSessions(lastSessions);
+  else skeleton(document.getElementById('session-list'), { tall: true, lines: 3 });
+
   const { ok, body } = await call('/sessions');
   if (!ok) return say(body.error || 'Could not load the sessions.');
+  lastSessions = body.sessions;
+  if (unchanged('sessions', body)) return;
+  drawSessions(body.sessions);
+}
 
+function drawSessions(sessions) {
   const list = document.getElementById('session-list');
   list.textContent = '';
-  for (const session of body.sessions) {
+  for (const session of sessions) {
     const card = document.createElement('button');
     card.className = 'session-card';
     card.type = 'button';
@@ -298,7 +311,19 @@ async function openSession(sessionId) {
 async function refreshSession() {
   const { ok, body } = await call('/sessions/' + openSessionId);
   if (!ok) return say(body.error || 'Could not load that session.');
+  // Twenty-five rows were being destroyed and rebuilt every eight seconds
+  // whether anything had changed or not, which is most of what made this feel
+  // unsteady. Nothing changed means nothing is touched.
+  if (unchanged('session', body)) return;
   renderSession(body.session, body.roster);
+}
+
+// True when this screen's data is exactly what was last drawn.
+function unchanged(key, payload) {
+  const signature = JSON.stringify(payload);
+  if (lastPayload[key] === signature) return true;
+  lastPayload[key] = signature;
+  return false;
 }
 
 function renderSession(session, roster) {
@@ -551,6 +576,7 @@ async function mark(person, entry) {
     return say(body.error || 'That mark did not save.');
   }
   say(`${person.name} marked.`, 'good');
+  lastPayload.session = null;
   keepRowInPlace(person.bkId, () => renderSession(lastSession, body.roster));
 }
 
@@ -699,11 +725,14 @@ async function generateCode() {
 
 async function showDirectory() {
   show('delegates');
-  if (!lastDirectory) skeleton(document.getElementById('delegate-list'), { lines: 8 });
+  if (lastDirectory) renderDirectory(document.getElementById('delegate-search').value);
+  else skeleton(document.getElementById('delegate-list'), { lines: 8 });
+
   const { ok, body } = await call('/delegates');
   if (!ok) return say(body.error || 'Could not load the delegates.');
   lastDirectory = body;
   document.getElementById('delegates-count').textContent = `${body.total} delegates, five centres.`;
+  if (unchanged('delegates', body)) return;
   renderDirectory(document.getElementById('delegate-search').value);
 }
 
@@ -828,9 +857,13 @@ async function showScores() {
 
 async function showDashboard() {
   show('dashboard');
-  skeleton(document.getElementById('dashboard-body'), { lines: 4 });
+  if (lastDashboard) renderDashboard(lastDashboard);
+  else skeleton(document.getElementById('dashboard-body'), { lines: 4 });
+
   const { ok, body } = await call('/dashboard');
   if (!ok) return say(body.error || 'Could not load the dashboard.');
+  lastDashboard = body;
+  if (unchanged('dashboard', body)) return;
   renderDashboard(body);
 }
 
@@ -921,6 +954,8 @@ async function decide(request, decision, note) {
   });
   if (!ok) return say(body.error || 'That decision did not save.');
   say(`${request.name}: ${decision === 'approved' ? 'excused' : 'denied'}.`, 'good');
+  lastDashboard = body.dashboard;
+  lastPayload.dashboard = null;
   renderDashboard(body.dashboard);
 }
 
@@ -937,6 +972,7 @@ async function refreshStanding() {
   const { ok, body } = await call('/me/standing');
   if (!ok) return say(body.error || 'Could not load your sessions.');
   lastStanding = body;
+  if (unchanged('standing', body)) return;
   renderStanding(body);
 }
 
@@ -1245,6 +1281,9 @@ function landOn(signedInAccount) {
 
 function signOut(reason) {
   forgetToken();
+  lastPayload = {};
+  lastSessions = null;
+  lastDashboard = null;
   account = null;
   openSessionId = null;
   openPerson = null;
@@ -1370,7 +1409,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=16').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=17').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

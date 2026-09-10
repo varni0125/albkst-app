@@ -46,16 +46,42 @@ self.addEventListener('fetch', (event) => {
   // Rule 3: never the API.
   if (url.origin !== self.location.origin) return;
 
-  // Rule 1: the page, network first.
+  // Rule 1: the page, network first — but not at any price. On a slow network
+  // waiting for the round trip is the whole of a cold start, so the network
+  // gets two and a half seconds and then the cached page goes up instead. The
+  // fetch carries on in the background and refreshes the cache for next time.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(SHELL, copy)).catch(() => {});
-          return response;
-        })
-        .catch(() => caches.match(SHELL).then((cached) => cached || Response.error()))
+      new Promise((resolve) => {
+        let settled = false;
+        const settle = (response) => {
+          if (settled) return;
+          settled = true;
+          resolve(response);
+        };
+
+        const network = fetch(request)
+          .then((response) => {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(SHELL, copy)).catch(() => {});
+            settle(response);
+            return response;
+          })
+          .catch(() => null);
+
+        setTimeout(() => {
+          if (settled) return;
+          caches.match(SHELL).then((cached) => {
+            if (cached) settle(cached);
+          });
+        }, 2500);
+
+        // If the network fails outright, fall back rather than hanging.
+        network.then((response) => {
+          if (response || settled) return;
+          caches.match(SHELL).then((cached) => settle(cached || Response.error()));
+        });
+      })
     );
     return;
   }

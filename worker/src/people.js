@@ -5,6 +5,7 @@
 
 import { readTab } from './sheets.js';
 import { pendingRequests } from './requests.js';
+import { fullName } from './names.js';
 
 const CENTER_ORDER = ['Birmingham', 'Dothan', 'Huntsville', 'Mobile', 'Montgomery'];
 const isTrue = (value) => String(value).trim().toLowerCase() === 'true';
@@ -56,7 +57,7 @@ export async function directory(env) {
     .filter((row) => row.bk_id && isTrue(row.active))
     .map((row) => ({
       bkId: row.bk_id,
-      name: `${row.first_name} ${row.last_name}`.trim(),
+      name: fullName(row.first_name, row.last_name),
       grade: row.grade,
       center: row.center,
       absencesUsed: counts.get(row.bk_id) || 0,
@@ -109,7 +110,7 @@ export async function delegateDetail(env, bkId) {
 
   return {
     bkId: row.bk_id,
-    name: `${row.first_name} ${row.last_name}`.trim(),
+    name: fullName(row.first_name, row.last_name),
     grade: row.grade,
     center: row.center,
     termGroup: row.term_group,
@@ -138,7 +139,7 @@ export async function dashboard(env) {
   const nameOf = new Map(
     delegates
       .filter((row) => isTrue(row.active))
-      .map((row) => [row.bk_id, `${row.first_name} ${row.last_name}`.trim()])
+      .map((row) => [row.bk_id, fullName(row.first_name, row.last_name)])
   );
 
   const allowanceSpent = [...counts.entries()]

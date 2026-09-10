@@ -114,7 +114,7 @@ Google Sheet, one tab per table.
 | field | notes |
 |---|---|
 | bk_id | primary key, the BKMS ID from the application |
-| first_name, last_name | |
+| first_name, last_name | stored plainly. The app shows the first name with bhai attached, since that is how anyone in the mandal says it aloud |
 | grade | high school grade, 9 to 12 |
 | center | the delegate's home center — five of them, so this is real data from day one, not a placeholder |
 | term_group | e.g. "Alabama 2026-2027" |

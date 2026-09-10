@@ -9,6 +9,7 @@
 // denied request is followed by a no-show.
 
 import { readTab, appendRows, updateRowWhere } from './sheets.js';
+import { fullName } from './names.js';
 
 const TAB = 'absence_requests';
 
@@ -35,7 +36,7 @@ export async function pendingRequests(env) {
     readTab(env, 'sessions'),
   ]);
   const nameOf = new Map(
-    delegates.map((row) => [row.bk_id, `${row.first_name} ${row.last_name}`.trim()])
+    delegates.map((row) => [row.bk_id, fullName(row.first_name, row.last_name)])
   );
   const sessionOf = new Map(sessions.map((row) => [row.session_id, row]));
 

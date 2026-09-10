@@ -4,6 +4,7 @@
 // never collide with a BK ID, which is what makes a single field unambiguous.
 
 import { findRow } from './sheets.js';
+import { withBhai, fullName } from './names.js';
 
 const isTrue = (value) => String(value).trim().toLowerCase() === 'true';
 
@@ -29,8 +30,8 @@ export async function lookupAccount(env, id) {
   return {
     id,
     role,
-    firstName: row.first_name,
+    firstName: withBhai(row.first_name),
     lastName: row.last_name,
-    name: `${row.first_name} ${row.last_name}`.trim(),
+    name: fullName(row.first_name, row.last_name),
   };
 }

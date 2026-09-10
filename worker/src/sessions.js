@@ -9,6 +9,7 @@ import { readTab, appendRows, updateRowWhere } from './sheets.js';
 import { codeIsValid } from './checkin-code.js';
 import { deniedFor, requestsFor, requestState, todayLocal } from './requests.js';
 import { checkinBuffer } from './checkin-buffer.js';
+import { fullName } from './names.js';
 
 const CENTER_ORDER = ['Birmingham', 'Dothan', 'Huntsville', 'Mobile', 'Montgomery'];
 const isTrue = (value) => String(value).trim().toLowerCase() === 'true';
@@ -149,7 +150,7 @@ export async function rosterFor(env, sessionId) {
       const record = latest.get(`${sessionId}|${row.bk_id}`) || null;
       return {
         bkId: row.bk_id,
-        name: `${row.first_name} ${row.last_name}`.trim(),
+        name: fullName(row.first_name, row.last_name),
         grade: row.grade,
         center: row.center,
         status: record ? record.status : 'not_checked_in',

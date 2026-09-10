@@ -45,6 +45,7 @@ let lastDashboard = null;
 let lastSchedule = null;
 let scheduleSessionId = null;
 let openDay = 1;
+let peopleView = 'delegates'; // or 'karyakars'
 let currentTab = null;
 let previousStatus = new Map(); // bkId -> status, so only real changes animate
 let shownTally = null;          // the number currently on screen, for counting up
@@ -750,9 +751,32 @@ async function showDirectory() {
   const { ok, body } = await call('/delegates');
   if (!ok) return say(body.error || 'Could not load the delegates.');
   lastDirectory = body;
-  document.getElementById('delegates-count').textContent = `${body.total} delegates, five centres.`;
   if (unchanged('delegates', body)) return;
   renderDirectory(document.getElementById('delegate-search').value);
+}
+
+function renderPeopleSwitch() {
+  const holder = document.getElementById('people-switch');
+  holder.textContent = '';
+  const counts = {
+    delegates: lastDirectory?.total || 0,
+    karyakars: (lastDirectory?.karyakars || []).length,
+  };
+  for (const key of ['delegates', 'karyakars']) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = key === 'delegates' ? 'Delegates' : 'Karyakars';
+    if (peopleView === key) button.setAttribute('aria-current', 'page');
+    button.addEventListener('click', () => {
+      peopleView = key;
+      renderDirectory(document.getElementById('delegate-search').value);
+    });
+    holder.append(button);
+  }
+  document.getElementById('delegates-count').textContent =
+    peopleView === 'delegates'
+      ? `${counts.delegates} delegates across five centres.`
+      : `${counts.karyakars} ${counts.karyakars === 1 ? 'karyakar' : 'karyakars'}.`;
 }
 
 function renderDirectory(filter = '') {
@@ -760,6 +784,11 @@ function renderDirectory(filter = '') {
   const list = document.getElementById('delegate-list');
   list.textContent = '';
   if (!lastDirectory) return;
+  renderPeopleSwitch();
+
+  // Two screens, not one mixed list: a roster and a staff list answer
+  // different questions.
+  if (peopleView === 'karyakars') return renderKaryakars(needle, list);
 
   let shown = 0;
   for (const group of lastDirectory.groups) {
@@ -790,39 +819,39 @@ function renderDirectory(filter = '') {
     }
     list.append(panel);
   }
-  // Karyakars, so a forgotten PIN has somewhere to be reset from.
-  const karyakars = (lastDirectory.karyakars || []).filter((k) =>
-    k.name.toLowerCase().includes(needle)
-  );
-  if (karyakars.length) {
-    shown += karyakars.length;
-    const head = document.createElement('div');
-    head.className = 'center-head';
-    head.innerHTML = `<span>Karyakars</span><span>${karyakars.length}</span>`;
-    list.append(head);
-
-    const panel = document.createElement('div');
-    panel.className = 'list';
-    for (const person of karyakars) {
-      const row = document.createElement('button');
-      row.className = 'person-link';
-      row.type = 'button';
-      row.innerHTML =
-        `<span class="initials">${escape(initialsOf(person.name))}</span>` +
-        `<span class="person-name">${escape(person.name)}</span>` +
-        `<span class="person-meta">${escape(person.id)}</span>`;
-      row.addEventListener('click', () => karyakarActions(person));
-      panel.append(row);
-    }
-    list.append(panel);
-  }
-
   if (!shown) {
     const empty = document.createElement('p');
     empty.className = 'empty';
     empty.textContent = 'Nobody by that name.';
     list.append(empty);
   }
+}
+
+function renderKaryakars(needle, list) {
+  const karyakars = (lastDirectory.karyakars || []).filter((k) =>
+    k.name.toLowerCase().includes(needle)
+  );
+  if (!karyakars.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.textContent = 'Nobody by that name.';
+    list.append(empty);
+    return;
+  }
+  const panel = document.createElement('div');
+  panel.className = 'list';
+  for (const person of karyakars) {
+    const row = document.createElement('button');
+    row.className = 'person-link';
+    row.type = 'button';
+    row.innerHTML =
+      `<span class="initials">${escape(initialsOf(person.name))}</span>` +
+      `<span class="person-name">${escape(person.name)}</span>` +
+      `<span class="person-meta">${escape(person.id)}</span>`;
+    row.addEventListener('click', () => karyakarActions(person));
+    panel.append(row);
+  }
+  list.append(panel);
 }
 
 // A karyakar has no attendance to show, so there is no detail screen worth
@@ -1920,7 +1949,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=32').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=33').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

@@ -233,9 +233,16 @@ export async function appendRows(env, tab, records) {
   const values = records.map((record) =>
     headers.map((name) => record[name] ?? '')
   );
+  // Written into the existing empty rows, not inserted as new ones.
+  //
+  // INSERT_ROWS makes a fresh row, and a fresh row copies the formatting of
+  // the row above it. On an empty tab that row is the header, so the first
+  // attendance row written came out navy with cream bold text, and every row
+  // after inherited it. Writing into rows that are already formatted avoids
+  // the whole problem.
   await api(
     env,
-    `/values/${encodeURIComponent(tab)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+    `/values/${encodeURIComponent(tab)}:append?valueInputOption=RAW&insertDataOption=OVERWRITE`,
     { method: 'POST', body: JSON.stringify({ values }) }
   );
 

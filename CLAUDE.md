@@ -58,6 +58,11 @@ Build the karyakar side first and well — it is the real product.
   request on a path a whole room uses at once.
 - **An append updates the cache rather than clearing it.** Clearing it meant
   each check-in forced the next one to re-read the whole spreadsheet.
+- **Appends use `insertDataOption=OVERWRITE`, not `INSERT_ROWS`.** An inserted
+  row copies the formatting of the row above it, so on an empty tab the first
+  attendance row came out navy with cream bold text — unreadable — and every
+  row after inherited it. The data rows are pre-formatted several hundred deep
+  and appends write into them.
 - **Attendance is append-only and reconciled by `marked_at`**, never by row
   order. The sheet is something karyakars will sort.
 - **Dates in the sheet must stay `yyyy-mm-dd`.** They are compared as strings.

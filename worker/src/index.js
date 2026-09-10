@@ -239,6 +239,17 @@ export default {
           if (state === 'open') {
             return json(env, { session: await setWindow(env, session, 'open') });
           }
+          // Back to never-opened. A window opened by mistake, or during a
+          // rehearsal, should not leave a session looking as though it has
+          // already been run.
+          if (state === 'reset') {
+            await setWindow(env, session, 'closed');
+            return json(env, {
+              session: (await listSessions(env, true)).find((s) => s.id === session.session_id),
+              roster: await rosterFor(env, session.session_id),
+            });
+          }
+
           if (state === 'closed') {
             const result = await closeWindow(env, session, account.id);
             return json(env, {
@@ -247,7 +258,7 @@ export default {
               markedAbsent: result.markedAbsent,
             });
           }
-          return fail(env, 400, 'Check-in can only be opened or closed.');
+          return fail(env, 400, 'Check-in can only be opened, closed, or reset.');
         }
 
         if (method === 'POST' && action === '/attendance') {

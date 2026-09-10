@@ -950,3 +950,115 @@ button:active:not(:disabled) {
 .person-link {
   align-items: center;
 }
+
+/* The programme */
+.day-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 20px;
+}
+
+.day-tabs button {
+  flex: 1;
+  margin: 0;
+  padding: 10px 4px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 999px;
+  background: var(--color-raised);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.day-tabs button[aria-current='page'] {
+  border-color: var(--color-action);
+  background: var(--color-action);
+  color: var(--color-action-text);
+}
+
+.slot-row {
+  display: flex;
+  gap: 14px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.slot-time {
+  flex: none;
+  width: 74px;
+  padding-top: 1px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.slot-what {
+  flex: 1;
+}
+
+.slot-what h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.slot-what p {
+  margin: 3px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+/* A meal is the same kind of thing as everything else, marked so it can be
+   picked out at a glance. Gold, which section 9 keeps for worth-a-word. */
+.slot-row[data-meal='true'] .slot-what h2 {
+  color: var(--color-gold-text);
+}
+
+.slot-row[data-meal='true'] .slot-time {
+  color: var(--color-gold-text);
+}
+
+.slot-edit {
+  margin: 6px 0 0;
+  padding: 0;
+  width: auto;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-decoration: underline;
+}
+
+.schedule-form {
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 12px;
+  background: var(--color-raised);
+}
+
+.schedule-form .pair {
+  display: flex;
+  gap: 10px;
+}
+
+.schedule-form .pair .field {
+  flex: 1;
+}
+
+.schedule-form label {
+  font-size: 13px;
+}
+
+.checkline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 16px;
+  font-size: 15px;
+}
+
+.checkline input {
+  width: auto;
+  margin: 0;
+}

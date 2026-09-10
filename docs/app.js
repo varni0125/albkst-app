@@ -20,6 +20,8 @@ const views = {
   dashboard: document.getElementById('view-dashboard'),
   delegate: document.getElementById('view-delegate'),
   mySession: document.getElementById('view-my-session'),
+  schedule: document.getElementById('view-schedule'),
+  scheduleEdit: document.getElementById('view-schedule-edit'),
 };
 const message = document.getElementById('message');
 const accountBar = document.getElementById('account-bar');
@@ -40,6 +42,9 @@ let lastStanding = null;
 let lastPayload = {};  // per screen, so a poll that changes nothing touches nothing
 let lastSessions = null;
 let lastDashboard = null;
+let lastSchedule = null;
+let scheduleSessionId = null;
+let openDay = 1;
 let currentTab = null;
 let previousStatus = new Map(); // bkId -> status, so only real changes animate
 let shownTally = null;          // the number currently on screen, for counting up
@@ -54,6 +59,8 @@ const ICON = {
   users: svg('<path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/>'),
   scores: svg('<path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"/><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"/><path d="M9 12l2 2l4 -4"/>'),
   attention: svg('<path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/>'),
+  home: svg('<path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/>'),
+  programme: svg('<path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4"/><path d="M18 18m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496v1.504l1 1"/>'),
 };
 
 const TABS = {
@@ -63,7 +70,11 @@ const TABS = {
     { key: 'scores', label: 'Scores', icon: ICON.scores, open: () => showScores() },
     { key: 'dashboard', label: 'Attention', icon: ICON.attention, open: () => showDashboard() },
   ],
-  delegate: [],
+  // The delegate side earns tabs now that there is a second thing to look at.
+  delegate: [
+    { key: 'today', label: 'Today', icon: ICON.home, open: () => showStanding() },
+    { key: 'programme', label: 'Programme', icon: ICON.programme, open: () => showSchedule() },
+  ],
 };
 
 /* ---------- plumbing ---------- */
@@ -1265,6 +1276,202 @@ function stopPolling() {
   pollTimer = null;
 }
 
+
+/* ---------- the programme ---------- */
+
+// Which session's programme to show: the one with check-in open, else the next
+// one that has not finished. Same rule as the delegate's own card.
+function programmeSession(sessions) {
+  return (
+    sessions.find((s) => !s.ended && s.checkinOpen) ||
+    sessions.find((s) => !s.ended) ||
+    sessions[sessions.length - 1]
+  );
+}
+
+async function showSchedule() {
+  show('schedule');
+  if (!lastStanding) {
+    const standing = await call('/me/standing');
+    if (standing.ok) lastStanding = standing.body;
+  }
+  const session = programmeSession(lastStanding?.sessions || []);
+  if (!session) return say('No sessions are scheduled yet.');
+
+  document.getElementById('schedule-where').textContent =
+    `${dateRange(session.startDate, session.endDate)} · ${session.location}`;
+
+  if (lastSchedule && scheduleSessionId === session.id) drawSchedule(lastSchedule, false);
+  else skeleton(document.getElementById('schedule-body'), { lines: 6 });
+
+  const { ok, body } = await call(`/sessions/${session.id}/schedule`);
+  if (!ok) return say(body.error || 'Could not load the programme.');
+  scheduleSessionId = session.id;
+  lastSchedule = body;
+  drawSchedule(body, false);
+}
+
+function dayTabs(schedule, holder, onPick) {
+  holder.textContent = '';
+  for (const day of schedule.days) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    // Friday, not Friday Sep 11: three of these have to fit across a phone.
+    button.textContent = (day.label.split(',')[0] || `Day ${day.day}`);
+    if (day.day === openDay) button.setAttribute('aria-current', 'page');
+    button.addEventListener('click', () => {
+      openDay = day.day;
+      onPick();
+    });
+    holder.append(button);
+  }
+}
+
+function drawSchedule(schedule, editable) {
+  const holder = document.getElementById(editable ? 'edit-day-tabs' : 'day-tabs');
+  dayTabs(schedule, holder, () => drawSchedule(schedule, editable));
+
+  const body = document.getElementById(editable ? 'schedule-edit-body' : 'schedule-body');
+  body.textContent = '';
+
+  const day = schedule.days.find((d) => d.day === openDay) || schedule.days[0];
+  if (!day || !day.items.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.textContent = editable
+      ? 'Nothing on this day yet. Add the first item below.'
+      : 'Nothing listed for this day yet.';
+    body.append(empty);
+    return;
+  }
+
+  for (const item of day.items) {
+    const row = document.createElement('div');
+    row.className = 'slot-row';
+    row.dataset.meal = String(item.isMeal);
+
+    const time = document.createElement('div');
+    time.className = 'slot-time';
+    time.textContent = item.time;
+    row.append(time);
+
+    const what = document.createElement('div');
+    what.className = 'slot-what';
+    const detail = [
+      item.presenter,
+      item.location,
+      item.duration ? item.duration : '',
+    ].filter(Boolean).join(' · ');
+    what.innerHTML =
+      `<h2>${escape(item.item)}</h2>` + (detail ? `<p>${escape(detail)}</p>` : '');
+    if (item.note) {
+      const note = document.createElement('p');
+      note.textContent = item.note;
+      what.append(note);
+    }
+    if (editable) {
+      const edit = document.createElement('button');
+      edit.className = 'slot-edit';
+      edit.type = 'button';
+      edit.textContent = 'Change';
+      edit.addEventListener('click', () => scheduleForm(item));
+      what.append(edit);
+    }
+    row.append(what);
+    body.append(row);
+  }
+}
+
+/* ---------- karyakar: changing the programme ---------- */
+
+async function openScheduleEditor(sessionId) {
+  scheduleSessionId = sessionId;
+  clearMessage();
+  show('scheduleEdit');
+  const session = lastSession;
+  document.getElementById('schedule-edit-where').textContent = session
+    ? `${dateRange(session.startDate, session.endDate)} · ${session.location}`
+    : '';
+  skeleton(document.getElementById('schedule-edit-body'), { lines: 6 });
+  const { ok, body } = await call(`/sessions/${sessionId}/schedule`);
+  if (!ok) return say(body.error || 'Could not load the programme.');
+  lastSchedule = body;
+  drawSchedule(body, true);
+}
+
+function scheduleForm(item) {
+  const holder = document.getElementById('schedule-form');
+  holder.textContent = '';
+  const form = document.createElement('div');
+  form.className = 'schedule-form';
+
+  const field = (label, id, value, placeholder) =>
+    `<div class="field"><label for="${id}">${label}</label>` +
+    `<input id="${id}" type="text" value="${escape(value || '')}" placeholder="${placeholder || ''}" /></div>`;
+
+  form.innerHTML =
+    `<div class="pair">${field('Start', 'sf-start', item?.rawTime, '19:30')}${field('End', 'sf-end', item?.rawEndTime, '20:30')}</div>` +
+    field('What', 'sf-item', item?.item, 'Dinner') +
+    `<div class="pair">${field('Presenter', 'sf-presenter', item?.presenter, '')}${field('Location', 'sf-location', item?.location, 'Main Hall')}</div>` +
+    `<label class="checkline"><input type="checkbox" id="sf-meal" ${item?.isMeal ? 'checked' : ''} /> This is a meal</label>`;
+
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.textContent = item ? 'Save changes' : 'Add to the programme';
+  save.addEventListener('click', () => saveScheduleItem(item?.id));
+  form.append(save);
+
+  if (item) {
+    const remove = document.createElement('button');
+    remove.className = 'linkish';
+    remove.type = 'button';
+    remove.textContent = 'Remove this item';
+    remove.addEventListener('click', () => saveScheduleItem(item.id, true));
+    form.append(remove);
+  }
+
+  const cancel = document.createElement('button');
+  cancel.className = 'linkish';
+  cancel.type = 'button';
+  cancel.textContent = 'Cancel';
+  cancel.addEventListener('click', () => {
+    holder.textContent = '';
+  });
+  form.append(cancel);
+
+  holder.append(form);
+  form.scrollIntoView({ block: 'nearest' });
+  document.getElementById('sf-item').focus();
+}
+
+async function saveScheduleItem(id, remove) {
+  clearMessage();
+  const value = (name) => document.getElementById(name)?.value.trim() || '';
+  const entry = remove
+    ? { id, remove: true }
+    : {
+        id,
+        day: openDay,
+        time: value('sf-start'),
+        endTime: value('sf-end'),
+        item: value('sf-item'),
+        presenter: value('sf-presenter'),
+        location: value('sf-location'),
+        isMeal: document.getElementById('sf-meal')?.checked || false,
+      };
+
+  const path = id ? 'schedule-edit' : 'schedule';
+  const { ok, body } = await call(`/sessions/${scheduleSessionId}/${path}`, {
+    method: 'POST',
+    body: JSON.stringify(entry),
+  });
+  if (!ok) return say(body.error || 'That did not save.');
+  say(remove ? 'Removed.' : 'Saved.', 'good');
+  document.getElementById('schedule-form').textContent = '';
+  lastSchedule = body;
+  drawSchedule(body, true);
+}
+
 /* ---------- session lifecycle ---------- */
 
 function landOn(signedInAccount) {
@@ -1275,8 +1482,7 @@ function landOn(signedInAccount) {
   accountBar.hidden = false;
   clearMessage();
   buildTabs(account.role);
-  if (account.role === 'karyakar') selectTab('sessions');
-  else showStanding();
+  selectTab(account.role === 'karyakar' ? 'sessions' : 'today');
 }
 
 function signOut(reason) {
@@ -1290,6 +1496,8 @@ function signOut(reason) {
   currentTab = null;
   lastDirectory = null;
   lastStanding = null;
+  lastSchedule = null;
+  scheduleSessionId = null;
   stopPolling();
   clearQr();
   accountBar.hidden = true;
@@ -1385,6 +1593,14 @@ document.getElementById('session-back').addEventListener('click', () => {
 
 document.getElementById('detail-back').addEventListener('click', () => showDirectory());
 document.getElementById('my-session-back').addEventListener('click', () => showStanding());
+document.getElementById('open-schedule').addEventListener('click', () =>
+  openScheduleEditor(openSessionId)
+);
+document.getElementById('schedule-back').addEventListener('click', () => {
+  document.getElementById('schedule-form').textContent = '';
+  show('session');
+});
+document.getElementById('schedule-add').addEventListener('click', () => scheduleForm(null));
 document.getElementById('qr-generate').addEventListener('click', generateCode);
 document.getElementById('qr-save').addEventListener('click', saveCode);
 document.getElementById('delegate-search').addEventListener('input', (event) =>
@@ -1409,7 +1625,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=17').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=18').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {

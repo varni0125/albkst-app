@@ -30,6 +30,7 @@ const TAB_MAX_AGE_MS = {
   attendance: 10000,      // a delegate's own screen polls every eight seconds
   scores: 30000,
   absence_requests: 10000,
+  schedule: 60000,        // set before a session and rarely touched during it
 };
 const tabCache = new Map(); // tab -> { rows, at }
 const headerCache = new Map(); // tab -> headers, which never change
@@ -49,6 +50,7 @@ const ALL_TABS = [
   'attendance',
   'scores',
   'absence_requests',
+  'schedule',
 ];
 
 // Concurrent requests inside one isolate share a single fetch instead of

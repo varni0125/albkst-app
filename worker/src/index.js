@@ -26,6 +26,7 @@ import {
   pendingRequests,
 } from './requests.js';
 import { directory, delegateDetail, dashboard } from './people.js';
+import { scheduleFor, addItem, editItem, removeItem, itemProblem } from './schedule.js';
 
 export { Account };
 export { CheckinBuffer } from './checkin-buffer.js';
@@ -268,6 +269,36 @@ export default {
             return fail(env, 409, 'Open check-in first, then generate a code.');
           }
           return json(env, await issueCode(env, session.session_id));
+        }
+
+        // The programme. Delegates read it; karyakars change it.
+        if (method === 'GET' && action === '/schedule') {
+          return json(env, await scheduleFor(env, session));
+        }
+
+        if (method === 'POST' && action === '/schedule') {
+          const denied = karyakarOnly();
+          if (denied) return denied;
+          const entry = await readJson(request);
+          const problem = itemProblem(entry);
+          if (problem) return fail(env, 400, problem);
+          await addItem(env, session.session_id, entry);
+          return json(env, await scheduleFor(env, session));
+        }
+
+        if (method === 'POST' && action === '/schedule-edit') {
+          const denied = karyakarOnly();
+          if (denied) return denied;
+          const entry = await readJson(request);
+          if (!entry.id) return fail(env, 400, 'Which item?');
+          if (entry.remove) {
+            await removeItem(env, entry.id);
+            return json(env, await scheduleFor(env, session));
+          }
+          const problem = itemProblem(entry);
+          if (problem) return fail(env, 400, problem);
+          await editItem(env, entry.id, entry);
+          return json(env, await scheduleFor(env, session));
         }
 
         if (method === 'POST' && action === '/absence-request') {

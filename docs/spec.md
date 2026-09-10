@@ -11,6 +11,11 @@ A standing tracker for BKST delegates. It answers two questions:
 - **Delegate:** am I meeting the program's requirements?
 - **Karyakar:** who is at risk, and what needs my attention?
 
+It also carries the programme for each session — the running order and the
+meals — because a session runs three days at a centre people drive to, and
+that information otherwise lives in a message nobody can find on the Saturday
+morning. That is a deliberate widening of what the app is for.
+
 It is not a motivation app. The program has hard requirements — 80% on session
 grades, one excused absence per year — and the app exists to make compliance
 visible before it becomes a dismissal.
@@ -164,6 +169,22 @@ reconciles on read — most recent row wins per (session_id, bk_id) — and the
 duplicate rows are the audit trail.
 
 Every other tab is one row per key.
+
+### schedule
+| field | notes |
+|---|---|
+| schedule_id | primary key |
+| session_id | |
+| day | 1, 2 or 3. The dates come from the session, so nobody retypes them |
+| start_time, end_time | 24 hour, so it sorts. Shown as 12 hour. End may be blank |
+| item | what is happening |
+| presenter | optional |
+| location | optional |
+| is_meal | shown in gold, in the running order rather than on its own screen |
+| note | |
+
+Cue numbers and total time are not stored: one is row order, the other is end
+minus start.
 
 ### absence_requests
 | field | notes |

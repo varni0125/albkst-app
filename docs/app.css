@@ -171,14 +171,25 @@ button:disabled {
   font-size: 20px;
 }
 
+/* Every quiet action is a pill. Underlined text is hard to hit accurately and
+   reads as a footnote; a pill reads as something you press. The one filled
+   button on a screen stays the only action-coloured element. */
 .linkish {
+  display: inline-block;
   width: auto;
-  margin: 8px 0 0;
-  padding: 0;
+  margin: 10px 0 0;
+  padding: 9px 16px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 999px;
   background: none;
   color: var(--color-text-muted);
   font-size: 14px;
-  text-decoration: underline;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.linkish:active {
+  background: var(--color-muted-surface);
 }
 
 footer {
@@ -215,8 +226,8 @@ footer {
 }
 
 .back {
-  display: block;
-  margin: 0 0 14px;
+  display: inline-block;
+  margin: 0 0 16px;
 }
 
 /* Reveal control on a PIN field */
@@ -399,11 +410,13 @@ footer {
 
 .action-row button {
   margin: 0;
-  padding: 10px 12px;
+  padding: 11px 14px;
   border: 1px solid var(--color-hairline);
+  border-radius: 999px;
   background: none;
   color: var(--color-text);
   font-size: 14px;
+  font-weight: 500;
 }
 
 .action-row button[data-kind='danger'] {
@@ -552,11 +565,14 @@ footer {
   margin-bottom: 24px;
 }
 
-.qr-panel button.quiet {
+.qr-panel button.quiet,
+button.quiet {
   margin: 0;
   border: 1px solid var(--color-hairline);
+  border-radius: 999px;
   background: var(--color-raised);
   color: var(--color-text);
+  font-weight: 500;
 }
 
 #qr-holder {
@@ -582,9 +598,7 @@ footer {
 }
 
 #qr-save {
-  display: inline-block;
-  width: auto;
-  margin-top: 8px;
+  margin-top: 12px;
   cursor: pointer;
 }
 
@@ -1020,13 +1034,17 @@ button:active:not(:disabled) {
 }
 
 .slot-edit {
-  margin: 6px 0 0;
-  padding: 0;
+  display: inline-block;
   width: auto;
+  margin: 8px 8px 0 0;
+  padding: 6px 14px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 999px;
   background: none;
   color: var(--color-text-muted);
   font-size: 13px;
-  text-decoration: underline;
+  font-weight: 500;
+  text-decoration: none;
 }
 
 /* The edit form is a dialog, not something appended to the bottom of the page.
@@ -1263,4 +1281,10 @@ input[type='time']::-webkit-calendar-picker-indicator {
   border-color: var(--color-red-bg);
   background: var(--color-red-bg);
   color: var(--color-red-text);
+}
+
+
+/* The two quiet actions in a dialog keep their own row rather than stacking. */
+.schedule-form .linkish {
+  margin-top: 0;
 }

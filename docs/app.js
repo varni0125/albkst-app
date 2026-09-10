@@ -1065,7 +1065,7 @@ function renderRequest(session) {
     const cancel = document.createElement('button');
     cancel.className = 'linkish';
     cancel.type = 'button';
-    cancel.textContent = 'Cancel this request';
+    cancel.textContent = 'Cancel request';
     cancel.addEventListener('click', () => cancelRequest(session.id));
     holder.append(cancel);
     return;
@@ -1079,7 +1079,7 @@ function renderRequest(session) {
   const open = document.createElement('button');
   open.className = 'linkish';
   open.type = 'button';
-  open.textContent = 'Cannot make this one? Request an absence';
+  open.textContent = 'Request an absence';
   open.addEventListener('click', () => {
     holder.textContent = '';
     const box = document.createElement('textarea');
@@ -1197,7 +1197,7 @@ function openMySession(sessionId) {
     const cancel = document.createElement('button');
     cancel.className = 'linkish';
     cancel.type = 'button';
-    cancel.textContent = 'Cancel this request';
+    cancel.textContent = 'Cancel request';
     cancel.addEventListener('click', async () => {
       await cancelRequest(session.id);
       openMySession(session.id);
@@ -1219,7 +1219,7 @@ function openMySession(sessionId) {
     const open = document.createElement('button');
     open.className = 'linkish';
     open.type = 'button';
-    open.textContent = 'Cannot make this one? Request an absence';
+    open.textContent = 'Request an absence';
     open.addEventListener('click', () => {
       holder.textContent = '';
       const box = document.createElement('textarea');
@@ -1834,7 +1834,7 @@ for (const button of document.querySelectorAll('.reveal')) {
 // perfectly well without it, it simply needs the network.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js?v=27').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=28').catch(() => {});
   });
   let reloading = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
